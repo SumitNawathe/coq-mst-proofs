@@ -123,7 +123,7 @@ Qed.
 
 End DIGRAPH.
 
-Section UNION_DIGRAPHS.
+Section UNION_DIGRAPHS. 
 
 Lemma D_union :
  forall (v1 v2 : V_set) (a1 a2 : A_set),
