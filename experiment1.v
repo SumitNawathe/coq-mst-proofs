@@ -65,7 +65,7 @@ Proof.
 	- destruct t as [|x' t'].
 		+ exists [h]. split; try solve [assumption].
 			inversion H; subst; clear H. constructor.
-			* simpl. intros Hhx'; inversion Hhx' as [Hhx|]; try solve [assumption]; clear Hhx'.
+			* simpl; intros Hhx'; inversion Hhx' as [Hhx|]; try solve [assumption]; clear Hhx'.
 				assert (E x h = None). { rewrite Hhx. apply irreflE. }
 				rewrite H in H3. solve [contradiction].
 			* constructor; auto. constructor.

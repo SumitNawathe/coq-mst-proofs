@@ -1,6 +1,6 @@
 Require Import List.
 Import ListNotations.
-Require Import Coq.Logic.FinFun.
+Require Import Coq.Logic.FinFuan.
 Require Import Coq.Sets.Ensembles.
 Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Vectors.Fin.

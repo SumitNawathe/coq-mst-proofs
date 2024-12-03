@@ -1,0 +1,9 @@
+*.vo
+*.vos
+*.vok
+*.glob
+.*.aux
+.coqdeps.d
+Makefile.coq*
+.DS_Store
+*.coq.d
