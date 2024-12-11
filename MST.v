@@ -2,6 +2,7 @@ Require Export MST.Graphs.
 Require Export MST.Edges.
 Require Export MST.Vertices.
 Require Export MST.Trees.
+Require Export MST.Connected.
 
 Section Weighted.
 
@@ -46,11 +47,17 @@ Inductive WeightedTree : V_set -> WA_set -> Set :=
         v = v' -> wa = wa' -> WeightedTree v wa -> WeightedTree v' wa'.
 
 (* A subgraph contains a subset of the edges of a graph G. TODO: is this definition correct? *)
-Definition is_subgraph (V V' : V_set) (E E' : WA_set) (T : WeightedGraph V' E') (G : WeightedGraph V E) : Prop := 
+(* Definition is_subgraph (V V' : V_set) (E E' : WA_set) (T : WeightedGraph V' E') (G : WeightedGraph V E) : Prop := 
     WA_included E' E.
 
 Definition is_subgraph_tree (V V' : V_set) (E E' : WA_set) (T : WeightedTree V' E') (G : WeightedGraph V E) : Prop := 
-    WA_included E' E.
+    WA_included E' E. *)
+
+Definition is_subgraph (V V' : V_set) (E E' : WA_set) (T : WeightedGraph V' E') (G : WeightedGraph V E) : Prop := 
+    V_included V' V /\ WA_included E' E.
+
+Definition is_subgraph_tree (V V' : V_set) (E E' : WA_set) (T : WeightedTree V' E') (G : WeightedGraph V E) : Prop := 
+    V_included V' V /\ WA_included E' E.
 
 (* A spanning graph contains all vertices of G *)
 Definition is_spanning (V V' : V_set) (E E' : WA_set) (T : WeightedGraph V' E') (G : WeightedGraph V E) : Prop := 
@@ -72,7 +79,8 @@ Definition root: WeightedTree (V_single (index 1)) (WA_empty) :=
 
 (* Need this to show that vertex 2 is NOT in the vertex set {vertex 1} *)
 Definition ex_not_in : ~ (V_single (index 1)) (index 2).
-Proof. Admitted. 
+Proof. intros H. inversion H. Qed.
+
 Definition root1leaf :=
     WT_leaf (V_single (index 1)) (WA_empty) root (index 2) (index 1) 5 (V_in_single (index 1)) (ex_not_in).
 
@@ -87,5 +95,33 @@ Proof. reflexivity. Qed.
 TODO: might be cleaner if we provide a inductive definition for SpanningTree.
 *)
 Definition is_MST (V V' : V_set) (WA WA': WA_set) (T : WeightedTree V' WA') (G : WeightedGraph V WA) : Prop := 
-    is_spanning_tree V V' WA WA' T G -> forall WA'' : WA_set, WA_included WA'' WA -> forall T' : WeightedTree V' WA'', is_spanning_tree V V' WA WA'' T' G -> total_tree_EW V' WA' T <= total_tree_EW V' WA'' T'.
+    is_spanning_tree V V' WA WA' T G ->
+    forall WA'' : WA_set, WA_included WA'' WA ->
+    forall T' : WeightedTree V' WA'',
+    is_spanning_tree V V' WA WA'' T' G ->
+    total_tree_EW V' WA' T <= total_tree_EW V' WA'' T'.
 End Weighted.
+
+
+Inductive WeightedConnected : V_set -> WA_set -> Set :=
+  | C_isolated : forall x : Vertex, WeightedConnected (V_single x) WA_empty
+  | C_leaf :
+      forall (v : V_set) (a : WA_set) (co : WeightedConnected v a) (x y : Vertex) (n : nat),
+      v x ->
+      ~ v y -> WeightedConnected (V_union (V_single y) v) (WA_union (WE_set n x y) a)
+  | C_edge :
+      forall (v : V_set) (a : WA_set) (co : WeightedConnected v a) (x y : Vertex) (n : nat),
+      v x ->
+      v y ->
+      x <> y ->
+      ~ a (WA_ends x y) ->
+      ~ a (WA_ends y x) -> WeightedConnected v (WA_union (WE_set n x y) a)
+  | C_eq :
+      forall (v v' : V_set) (a a' : WA_set),
+      v = v' -> a = a' -> WeightedConnected v a -> WeightedConnected v' a'.
+
+Definition not_connected_no_spanning_tree :
+    forall (V: V_set) (E: WA_set) (G: WeightedGraph V E),
+    Connected V E ->
+    forall (V' : V_set) (E' : WA_set) (T : WeightedTree V' E'),
+    ~ is_spanning_tree V V' E E' T G.
