@@ -14,8 +14,8 @@ Notation "∅" := (Empty _)
 	(at level 50) : uset_scope.
 Notation "A '\' B" := (Differ _ A B)
 	(at level 70) : uset_scope.
-Notation "'{{' x '}}'" := (Single _ x)
-	(at level 60) : uset_scope.
+Notation "'⟨' x '⟩'" := (Single _ x)
+	(at level 0, x at level 99) : uset_scope.
 Notation "x ∈ A" := ((A: U_set _) x)
 	(at level 65) : uset_scope.
 Notation "x ∉ A" := (~ (A: U_set _) x)

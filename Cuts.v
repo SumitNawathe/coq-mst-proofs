@@ -23,7 +23,7 @@ Lemma self_inclusion : forall T (A : U_set T), A ⊂ A.
 Proof. intros. unfold Included. auto. Qed.
 
 Lemma set_minus_point_still_included :
-	forall T (A : U_set T) (x : T), A \ {{x}} ⊂ A.
+	forall T (A : U_set T) (x : T), (A\⟨x⟩) ⊂ A.
 Proof.
 	intros. unfold Included. intros y H_differ.
 	inversion H_differ; subst; clear H_differ. assumption.
@@ -34,7 +34,7 @@ Lemma included_trans :
 Proof. intros T A B C H_AB H_BC. unfold Included. intros. auto. Qed.
 
 Lemma not_Single_not_equal :
-	forall (T : Set) (x y : T), y ∉ {{x}} -> x <> y.
+	forall (T : Set) (x y : T), y ∉ ⟨x⟩ -> x <> y.
 Proof.
 	intros. unfold not; intros H_xy.
 	rewrite H_xy in H. apply H. constructor.
@@ -235,9 +235,6 @@ Proof.
 Qed.
 
 
-Definition nontrivial_cut {V : V_set} {E : A_set} (G : Graph V E) (A : V_set) : Prop :=
-	A ⊂ V /\ (exists x, A x) /\ (exists y, V y /\ ~ A y).
-
 Definition edge_crossing_cut {V : V_set} {E : A_set} (G : Graph V E) (A : V_set) (x y: Vertex) : Prop :=
 	nontrivial_cut G A -> E (A_ends x y) /\ A x /\ ~ A y.
 
@@ -249,6 +246,7 @@ Lemma connected_graph_has_edge_crossing_cut :
 Proof.
 	intros V E G H_connected A H_A_cut.
 	(* Since A nontrivial, get vertex x in A and y not in A *)
+	apply nontrivial_cut_points in H_A_cut.
 	destruct H_A_cut as [H_VA [[x H_Ax] [y [H_Vy H_not_Ay]]]].
 	apply H_VA in H_Ax as H_Vx.
 	(* Get path between these vertices *)
