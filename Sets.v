@@ -36,6 +36,8 @@
 Require Export Lia.
 Require Export Peano_dec.
 
+Axiom decideability : forall A, {A} + {~ A}.
+
 Theorem gt_n_S : forall n m, n > m -> S n > S m.
 Proof.
   auto with arith.
@@ -44,7 +46,7 @@ Hint Resolve gt_n_S: arith v62.
 
 Section U_SETS.
 
-Variable U : Set.
+Variable U : Type.
 
 Definition U_set := U -> Prop.
 
@@ -313,7 +315,7 @@ Lemma Union_differ_inter :
  forall E F : U_set,
  (forall x : U, {F x} + {~ F x}) -> Union (Differ E F) (Inter E F) = E.
 Proof.
-        intros; apply U_set_eq; split; intros.
+        intros E F H. apply U_set_eq; split; intros H0.
         inversion H0.
         inversion H1; trivial.
 

@@ -1,4 +1,4 @@
-COQMFFLAGS := -Q . MST -arg -impredicative-set
+COQMFFLAGS := -Q . MST
 ALLVFILES := Sets.v Enumerated.v Vertices.v Arcs.v Connected.v Degrees.v Digraphs.v Dipaths.v Edges.v Graphs.v Paths.v Trees.v Acyclic.v MST.v CustomNotations.v Cuts.v
 
 build: Makefile.coq

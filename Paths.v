@@ -35,7 +35,7 @@ Section PATH.
 Variable v : V_set.
 Variable a : A_set.
 
-Inductive Walk : Vertex -> Vertex -> V_list -> E_list -> Set :=
+Inductive Walk : Vertex -> Vertex -> V_list -> E_list -> Type :=
   | W_null : forall x : Vertex, v x -> Walk x x V_nil E_nil
   | W_step :
       forall (x y z : Vertex) (vl : V_list) (el : E_list),
@@ -45,7 +45,7 @@ Inductive Walk : Vertex -> Vertex -> V_list -> E_list -> Set :=
 Definition Closed_walk (x y : Vertex) (vl : V_list) 
   (el : E_list) (w : Walk x y vl el) := x = y.
 
-Inductive Trail : Vertex -> Vertex -> V_list -> E_list -> Set :=
+Inductive Trail : Vertex -> Vertex -> V_list -> E_list -> Type :=
   | T_null : forall x : Vertex, v x -> Trail x x V_nil E_nil
   | T_step :
       forall (x y z : Vertex) (vl : V_list) (el : E_list),
@@ -58,7 +58,7 @@ Inductive Trail : Vertex -> Vertex -> V_list -> E_list -> Set :=
 Definition Closed_trail (x y : Vertex) (vl : V_list) 
   (el : E_list) (t : Trail x y vl el) := x = y.
 
-Inductive Path : Vertex -> Vertex -> V_list -> E_list -> Set :=
+Inductive Path : Vertex -> Vertex -> V_list -> E_list -> Type :=
   | P_null : forall x : Vertex, v x -> Path x x V_nil E_nil
   | P_step :
       forall (x y z : Vertex) (vl : V_list) (el : E_list),
@@ -671,21 +671,23 @@ Lemma Path_supergraph_arc :
  (forall x' y' : Vertex, In (E_ends x' y') el -> a' (A_ends x' y')) ->
  Path v' a' x y vl el.
 Proof.
-        intros v v' a a' x y vl el p; elim p; intros.
+        intros v v' a a' x y vl el p; elim p.
+        intros x0 v0 X H H0.
         apply P_null; trivial.
 
+        intros x0 y0 z vl0 el0 p0 H v0 a0 n n0 e n1 X H0 H1.
         apply P_step.
         apply H.
         trivial.
 
-        apply (G_ina_inv2 v' a' H0 x0 y0).
-        apply H2; simpl; auto.
+        apply (G_ina_inv2 v' a' X x0 y0).
+        apply H1; simpl; auto.
 
-        intros; apply H2; simpl; auto.
+        intros; apply H1; simpl; auto.
 
         trivial.
 
-        apply H2; simpl; auto.
+        apply H1; simpl; auto.
 
         trivial.
 

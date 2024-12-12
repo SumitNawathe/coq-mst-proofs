@@ -6,7 +6,7 @@ Require Export MST.Connected.
 
 Section Weighted.
 
-Inductive WeightedArc : Set := 
+Inductive WeightedArc : Type := 
     WA_ends : nat -> Vertex -> Vertex -> WeightedArc.
 
 Definition WA_set := U_set WeightedArc.
@@ -24,7 +24,7 @@ Inductive WE_set (n : nat) (x y : Vertex) : WA_set :=
     | WE_right : WE_set n x y (WA_ends n x y)
     | WE_left : WE_set n x y (WA_ends n y x).
 
-Inductive WeightedGraph : V_set -> WA_set -> Set := 
+Inductive WeightedGraph : V_set -> WA_set -> Type := 
     | WG_empty : WeightedGraph V_empty WA_empty 
     | WG_vertex : forall (v : V_set) (wa : WA_set) (d : WeightedGraph v wa) (x : Vertex), 
         ~ v x -> WeightedGraph (V_union (V_single x) v) wa
@@ -38,7 +38,7 @@ Inductive WeightedGraph : V_set -> WA_set -> Set :=
         forall (v v' : V_set) (wa wa' : WA_set),
         v = v' -> wa = wa' -> WeightedGraph v wa -> WeightedGraph v' wa'.
 
-Inductive WeightedTree : V_set -> WA_set -> Set := 
+Inductive WeightedTree : V_set -> WA_set -> Type := 
     | WT_root : forall r : Vertex, WeightedTree (V_single r) WA_empty
     (* A leaf node is the union between an existing tree and a single node l, with a single arc connecting *)
     | WT_leaf : forall (v : V_set) (wa : WA_set) (t : WeightedTree v wa) (l x : Vertex) (n : nat), 
@@ -103,7 +103,7 @@ Definition is_MST (V V' : V_set) (WA WA': WA_set) (T : WeightedTree V' WA') (G :
 End Weighted.
 
 
-Inductive WeightedConnected : V_set -> WA_set -> Set :=
+(* Inductive WeightedConnected : V_set -> WA_set -> Set :=
   | C_isolated : forall x : Vertex, WeightedConnected (V_single x) WA_empty
   | C_leaf :
       forall (v : V_set) (a : WA_set) (co : WeightedConnected v a) (x y : Vertex) (n : nat),
@@ -124,4 +124,4 @@ Definition not_connected_no_spanning_tree :
     forall (V: V_set) (E: WA_set) (G: WeightedGraph V E),
     Connected V E ->
     forall (V' : V_set) (E' : WA_set) (T : WeightedTree V' E'),
-    ~ is_spanning_tree V V' E E' T G.
+    ~ is_spanning_tree V V' E E' T G. *)

@@ -26,7 +26,7 @@ Require Export MST.Graphs.
 
 Section CONNECTED.
 
-Inductive Connected : V_set -> A_set -> Set :=
+Inductive Connected : V_set -> A_set -> Type :=
   | C_isolated : forall x : Vertex, Connected (V_single x) A_empty
   | C_leaf :
       forall (v : V_set) (a : A_set) (co : Connected v a) (x y : Vertex),
@@ -78,11 +78,11 @@ Proof.
 
         apply V_in_left; apply V_in_single.
 
-        red; intros; elim n; rewrite <- H0; trivial.
+        red; intros; elim n; rewrite <- H; trivial.
 
-        red; intros; elim n; apply (G_ina_inv2 _ _ H _ _ H0).
+        red; intros; elim n; apply (G_ina_inv2 _ _ X _ _ H).
 
-        red; intros; elim n; apply (G_ina_inv1 _ _ H _ _ H0).
+        red; intros; elim n; apply (G_ina_inv1 _ _ X _ _ H).
 
         apply G_edge; trivial.
 
@@ -330,47 +330,59 @@ Proof.
         elim (A_empty_nothing (A_ends x0 y)).
         fold A_empty; rewrite H6; apply A_in_left; apply E_right.
 
-        case (V_union_single_dec _ _ _ n H1) as [e|v2].
+        case (V_union_single_dec _ _ _ n H0) as [e|v2].
         apply C_eq with (v := v0) (a := a0).
         apply (V_union_inversion (V_single y)).
         apply V_single_disjoint; trivial.
 
         rewrite e; apply V_single_disjoint; trivial.
 
-        rewrite <- e in H4; trivial.
+        rewrite <- e in H4. trivial.
+        generalize (H1 x); rewrite e; intros.
+        assert (Hx : A_union (E_set x y0) a0 (A_ends y0 x)). {
+					unfold A_union. constructor. constructor.
+        }
+				apply H7 in Hx. subst. apply H3.
 
-        generalize (H2 x); rewrite e; intros.
-        apply (A_union_inversion (E_set x y)).
+				apply (A_union_inversion (E_set x y)).
         apply E_set_disjoint; red; intros.
-        elim n; apply (C_ina_inv2 _ _ co _ _ H9).
+        elim n; apply (C_ina_inv2 _ _ co _ _ H7).
 
-        elim n; apply (C_ina_inv1 _ _ co _ _ H9).
+        elim n; apply (C_ina_inv1 _ _ co _ _ H7).
 
-        rewrite e; rewrite H8.
+				(* subst. auto.
+				apply (X x y0).
+				assumption.
+				assumption.
+				intros. Search x. *)
+
+				generalize (H1 x); rewrite e; intros.
+        rewrite H7.
         apply E_set_disjoint; trivial.
 
         apply A_in_left; apply E_left.
 
-        fold A_union; rewrite H7; rewrite e; rewrite H8.
+				generalize (H1 x); rewrite e; intros.
+        fold A_union. rewrite <- e. rewrite H6; rewrite e; rewrite H7.
         trivial.
 
         apply A_in_left; apply E_left.
 
         trivial.
 
-        case (V_union_single_dec _ _ _ n H0) as [e|v3].
-        rewrite <- e in H2;
-         generalize (C_pendant_isolated _ _ co x y y0 n H2); 
+        case (V_union_single_dec _ _ _ n H) as [e|v3].
+        rewrite <- e in H1;
+         generalize (C_pendant_isolated _ _ co x y y0 n H1); 
          intros.
-        generalize (C_minus_isolated _ _ co y0 v2 H8); intros.
-        decompose [and] H9.
+        generalize (C_minus_isolated _ _ co y0 v2 H7); intros.
+        decompose [and] H8.
         apply C_eq with (v := V_single y) (a := A_empty).
         symmetry ; apply (V_union_single_single v' y y0).
         red; intros Heq; elim n; rewrite Heq; trivial.
 
         trivial.
 
-        rewrite H10 in H4; trivial.
+        rewrite H9 in H3; trivial.
 
         apply (A_union_edge_edge a0 a' x0 y0).
         trivial.
@@ -379,8 +391,8 @@ Proof.
 
         trivial.
 
-        rewrite <- H7.
-        rewrite H10 in v1; inversion v1.
+        rewrite <- H6.
+        rewrite H9 in v1; inversion v1.
         rewrite e; apply A_union_eq.
         apply E_set_eq.
 
@@ -401,9 +413,9 @@ Proof.
         trivial.
 
         apply (A_union_single_inter x y x0 y0).
-        red; intros; elim n; apply (C_ina_inv2 _ _ co _ _ H8).
+        red; intros; elim n; apply (C_ina_inv2 _ _ co _ _ H7).
 
-        red; intros; elim n; apply (C_ina_inv1 _ _ co _ _ H8).
+        red; intros; elim n; apply (C_ina_inv1 _ _ co _ _ H7).
 
         apply E_set_diff2.
         red; intros Heq; elim n; rewrite Heq; trivial.
@@ -413,11 +425,11 @@ Proof.
         trivial.
 
         apply C_leaf.
-        apply (H x0 y0 v3 v2).
-        intros; apply (H2 z).
+        apply (X x0 y0 v3 v2).
+        intros; apply (H1 z).
         apply A_in_right; trivial.
 
-        red; intros Hi; elim H3; inversion Hi; trivial.
+        red; intros Hi; elim H2; inversion Hi; trivial.
 
         symmetry ; rewrite V_inter_commut;
          apply (V_union_single_inter y0 y).
@@ -450,9 +462,9 @@ Proof.
         case (V_union_single_dec y0 x v') as [e|v4].
         trivial.
 
-        rewrite <- H4; apply V_in_right; trivial.
+        rewrite <- H3; apply V_in_right; trivial.
 
-        elim n; rewrite (H2 y).
+        elim n; rewrite (H1 y).
         trivial.
 
         rewrite e; apply A_in_left; apply E_right.
@@ -462,7 +474,7 @@ Proof.
         red; intros Hi; elim n; inversion Hi; trivial.
 
         generalize
-         (E_not_eq_traversal_pendant _ _ co x y x0 y0 v1 v2 n n0 n1 H0 H1 H2);
+         (E_not_eq_traversal_pendant _ _ co x y x0 y0 v1 v2 n n0 n1 H H0 H1);
          intros.
         apply C_eq with (v := v') (a := A_union (E_set x y) (A_inter a0 a')).
         trivial.
@@ -470,8 +482,8 @@ Proof.
         apply (A_union_single_inter x y x0 y0); trivial.
 
         apply C_edge.
-        apply (H x0 y0 H0 H1).
-        intros; apply H2; apply A_in_right; trivial.
+        apply (X x0 y0 H H0).
+        intros; apply H1; apply A_in_right; trivial.
 
         trivial.
 
@@ -486,21 +498,21 @@ Proof.
         rewrite A_inter_commut; symmetry ;
          apply (A_union_single_inter x0 y0 x y); auto.
 
-        rewrite H4 in v1; inversion v1.
-        elim H8; inversion H9.
-        rewrite <- (H2 y).
+        rewrite H3 in v1; inversion v1.
+        elim H7; inversion H8.
+        rewrite <- (H1 y).
         apply E_set_eq.
 
-        rewrite H11; apply A_in_left; apply E_right.
+        rewrite H10; apply A_in_left; apply E_right.
 
         trivial.
 
-        rewrite H4 in v2; inversion v2.
-        elim H8; inversion H9.
-        rewrite <- (H2 x).
+        rewrite H3 in v2; inversion v2.
+        elim H7; inversion H8.
+        rewrite <- (H1 x).
         trivial.
 
-        rewrite H11; apply A_in_left; apply E_left.
+        rewrite H10; apply A_in_left; apply E_left.
 
         trivial.
 
@@ -510,7 +522,7 @@ Proof.
 
         apply A_not_inter; trivial.
 
-        apply (H x y).
+        apply (X x y).
         rewrite e; trivial.
 
         rewrite e; trivial.

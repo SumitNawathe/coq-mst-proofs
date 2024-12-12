@@ -21,7 +21,7 @@ Require Export MST.Paths.
 
 Section ACYCLIC.
 
-Inductive Acyclic : V_set -> A_set -> Set :=
+Inductive Acyclic : V_set -> A_set -> Type :=
   | AC_empty : Acyclic V_empty A_empty
   | AC_vertex :
       forall (v : V_set) (a : A_set) (ac : Acyclic v a) (x : Vertex),
@@ -51,9 +51,9 @@ Proof.
 
         red; intros Heq; elim n; rewrite <- Heq; trivial.
 
-        red; intros; elim n; apply (G_ina_inv2 v0 a0 H x y); trivial.
+        red; intros; elim n; apply (G_ina_inv2 v0 a0 X x y); trivial.
 
-        red; intros; elim n; apply (G_ina_inv1 v0 a0 H y x); trivial.
+        red; intros; elim n; apply (G_ina_inv1 v0 a0 X y x); trivial.
 
         apply G_eq with (v := v0) (a := a0); trivial.
 Defined.
@@ -87,7 +87,7 @@ Remark AC_vertex_isolated :
  Acyclic (V_union (V_single x) v) a -> forall y : Vertex, ~ a (A_ends x y).
 Proof.
         intros; red; intros.
-        elim H0; apply (AC_ina_inv1 v a x y); trivial.
+        elim H; apply (AC_ina_inv1 v a x y); trivial.
 Qed.
 
 Lemma AC_vertex_degree_zero :
@@ -108,8 +108,8 @@ Remark AC_edge_pendant :
  Acyclic (V_union (V_single y) v) (A_union (E_set x y) a) ->
  forall z : Vertex, A_union (E_set x y) a (A_ends z y) -> z = x.
 Proof.
-        intros; inversion H3.
-        inversion H4; trivial.
+        intros; inversion H1.
+        inversion H2; trivial.
 
         absurd (v y).
         trivial.
