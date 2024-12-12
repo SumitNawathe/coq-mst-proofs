@@ -29,7 +29,7 @@ Require Export List.
 
 Section ENUMERATION.
 
-Variable U : Set.
+Variable U : Type.
 
 Hypothesis U_separable : forall x y : U, {x = y} + {x <> y}.
 
@@ -50,7 +50,7 @@ Proof.
         right; red; intros; inversion H.
 
         case (U_separable x a); intros H0.
-        left; simpl; info_auto.
+        left; simpl; auto.
 
         case H; intros H1.
         left; simpl; auto.
@@ -71,8 +71,8 @@ Fixpoint U_sum (ul : U_list) : nat :=
 
 Lemma U_enumerable_sum : forall E : U_set U, U_enumerable E -> nat.
 Proof.
-        intros; elim H; intros.
-        apply (U_sum x).
+  intros E H; elim H; intros x H0.
+  apply (U_sum x).
 Defined.
 
 End ENUMERATION.

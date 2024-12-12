@@ -34,7 +34,7 @@ Variable v : V_set.
 
 Variable a : A_set.
 
-Inductive D_walk : Vertex -> Vertex -> V_list -> A_list -> Set :=
+Inductive D_walk : Vertex -> Vertex -> V_list -> A_list -> Type :=
   | DW_null : forall x : Vertex, v x -> D_walk x x V_nil A_nil
   | DW_step :
       forall (x y z : Vertex) (vl : V_list) (al : A_list),
@@ -44,7 +44,7 @@ Inductive D_walk : Vertex -> Vertex -> V_list -> A_list -> Set :=
 Definition D_closed_walk :=
   forall (x : Vertex) (vl : V_list) (al : A_list), D_walk x x vl al.
 
-Inductive D_trail : Vertex -> Vertex -> V_list -> A_list -> Set :=
+Inductive D_trail : Vertex -> Vertex -> V_list -> A_list -> Type :=
   | DT_null : forall x : Vertex, v x -> D_trail x x V_nil A_nil
   | DT_step :
       forall (x y z : Vertex) (vl : V_list) (al : A_list),
@@ -55,7 +55,7 @@ Inductive D_trail : Vertex -> Vertex -> V_list -> A_list -> Set :=
 Definition D_closed_trail :=
   forall (x : Vertex) (vl : V_list) (al : A_list), D_trail x x vl al.
 
-Inductive D_path : Vertex -> Vertex -> V_list -> A_list -> Set :=
+Inductive D_path : Vertex -> Vertex -> V_list -> A_list -> Type :=
   | DP_null : forall x : Vertex, v x -> D_path x x V_nil A_nil
   | DP_step :
       forall (x y z : Vertex) (vl : V_list) (al : A_list),

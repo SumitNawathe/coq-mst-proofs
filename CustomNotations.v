@@ -1,5 +1,6 @@
 Require Export MST.Sets.
 Require Export MST.Vertices.
+Require Export MST.Edges.
 
 Declare Scope uset_scope.
 Open Scope uset_scope.
@@ -23,5 +24,9 @@ Notation "x ∉ A" := (~ (A: U_set _) x)
 Notation "A ∪ B" := (Union _ A B)
 	(at level 65) : uset_scope.
 Notation "A ∩ B" := (Inter _ A B)
+	(at level 65) : uset_scope.
+Notation "x '--' y" := (A_ends x y)
+	(at level 65) : uset_scope.
+Notation "x '~~' y" := (E_ends x y)
 	(at level 65) : uset_scope.
 

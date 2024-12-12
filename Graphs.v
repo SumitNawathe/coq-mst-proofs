@@ -33,7 +33,7 @@ Require Export MST.Edges.
 
 Section GRAPH.
 
-Inductive Graph : V_set -> A_set -> Set :=
+Inductive Graph : V_set -> A_set -> Type :=
   | G_empty : Graph V_empty A_empty
   | G_vertex :
       forall (v : V_set) (a : A_set) (d : Graph v a) (x : Vertex),
@@ -221,8 +221,8 @@ Proof.
 
         trivial.
 
-        red; intros; inversion_clear H0.
-        inversion H1.
+        red; intros; inversion_clear H.
+        inversion H0.
         elim n; auto.
 
         elim n0; auto.
@@ -238,7 +238,7 @@ Lemma G_union :
  forall (v1 v2 : V_set) (a1 a2 : A_set),
  Graph v1 a1 -> Graph v2 a2 -> Graph (V_union v1 v2) (A_union a1 a2).
 Proof.
-        intros; elim H; intros.
+        intros; elim X; intros.
         apply G_eq with (v := v2) (a := a2).
         symmetry ; apply V_union_neutral.
 
@@ -246,7 +246,7 @@ Proof.
 
         trivial.
 
-        case (G_v_dec v2 a2 H0 x); intros.
+        case (G_v_dec v2 a2 X0 x); intros.
         apply G_eq with (v := V_union v v2) (a := A_union a a2).
         rewrite V_union_assoc; rewrite (V_union_absorb (V_single x)); trivial.
         apply V_included_single; apply V_in_right; trivial.
@@ -267,7 +267,7 @@ Proof.
 
         apply V_not_union; trivial.
 
-        case (G_a_dec v2 a2 H0 (A_ends x y)); intros H2.
+        case (G_a_dec v2 a2 X0 (A_ends x y)); intros H2.
         apply G_eq with (v := V_union v v2) (a := A_union a a2).
         trivial.
 
@@ -275,7 +275,7 @@ Proof.
         apply E_inclusion.
         apply A_in_right; trivial.
 
-        apply A_in_right; apply (G_non_directed v2 a2 H0); auto.
+        apply A_in_right; apply (G_non_directed v2 a2 X0); auto.
 
         trivial.
 
@@ -300,7 +300,7 @@ Proof.
         apply A_not_union.
         trivial.
 
-        red; intro; elim H2; apply (G_non_directed v2 a2 H0); trivial.
+        red; intro; elim H2; apply (G_non_directed v2 a2 X0); trivial.
 
         apply G_eq with (v := V_union v v2) (a := A_union a a2).
         elim e; trivial.
@@ -356,7 +356,7 @@ Proof.
 intros v a g; elim g; intros.
 elim (V_empty_nothing x); trivial.
 
-case (V_union_single_dec x x0 v0 n H0) as [e|v1].
+case (V_union_single_dec x x0 v0 n H) as [e|v1].
 apply G_eq with (v := v0) (a := a0).
 apply V_union_inversion with (E := V_single x).
 apply V_single_disjoint; trivial.
@@ -369,7 +369,7 @@ trivial.
 
 trivial.
 
-generalize (H x0 v1 H1); intros.
+generalize (X x0 v1 H0); intros.
 apply G_eq with (v := V_union (V_single x) (V_inter v0 v')) (a := a0).
 apply (V_union_single_inter x x0).
 trivial.
@@ -381,7 +381,7 @@ trivial.
 trivial.
 
 apply G_vertex.
-apply H4.
+apply X0.
 unfold V_inter.
 rewrite (V_inter_commut v0 v'); apply V_not_inter; trivial.
 
@@ -395,23 +395,23 @@ auto.
 apply V_not_inter; trivial.
 
 apply G_edge.
-apply (H x0).
+apply (X x0).
 trivial.
 
-red; intros; elim (H1 y0).
+red; intros; elim (H0 y0).
 apply A_in_right; trivial.
 
 trivial.
 
 trivial.
 
-rewrite H3 in v1; inversion v1.
-elim (H1 y); inversion H4; apply A_in_left; apply E_right.
+rewrite H2 in v1; inversion v1.
+elim (H0 y); inversion H4; apply A_in_left; inversion H3; subst; apply E_right.
 
 trivial.
 
-rewrite H3 in v2; inversion v2.
-elim (H1 x); inversion H4; apply A_in_left; apply E_left.
+rewrite H2 in v2; inversion v2.
+elim (H0 x); inversion H4; apply A_in_left; inversion H3; subst; apply E_left.
 
 trivial.
 
@@ -426,8 +426,8 @@ trivial.
 
 trivial.
 
-apply (H x).
-rewrite e; rewrite H3; apply V_in_left; apply V_in_single.
+apply (X x).
+rewrite e; assumption.
 
 rewrite e0; trivial.
 
@@ -476,7 +476,7 @@ apply E_set_disjoint; trivial.
 
 rewrite H4; apply E_set_disjoint; trivial.
 
-rewrite <- H4 in H3; trivial.
+rewrite <- H4 in H2; trivial.
 
 trivial.
 
@@ -486,8 +486,8 @@ trivial.
 apply A_union_single_inter with (x' := x0) (y' := y0); trivial.
 
 apply G_edge.
-apply (H x0 y0).
-inversion H0 as [? H5 H6|? H5 H6].
+apply (X x0 y0).
+inversion H as [? H5 H6|? H5 H6].
 absurd (E_set x y = E_set x0 y0).
 trivial.
 
@@ -498,9 +498,9 @@ apply E_set_eq.
 
 trivial.
 
-red; intros Ha; inversion Ha; elim H1; trivial.
+red; intros Ha; inversion Ha; elim H1; trivial; intuition.
 
-red; intros Ha; inversion Ha; elim H2; trivial.
+red; intros Ha; inversion Ha; elim H2; trivial; intuition.
 
 rewrite A_inter_commut; symmetry ;
  apply A_union_single_inter with (x' := x) (y' := y).
@@ -528,7 +528,7 @@ trivial.
 
 trivial.
 
-apply (H x y).
+apply (X x y).
 rewrite e0; trivial.
 
 trivial.

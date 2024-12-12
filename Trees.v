@@ -21,7 +21,7 @@ Require Export MST.Connected.
 
 Section TREE.
 
-Inductive Tree : V_set -> A_set -> Set :=
+Inductive Tree : V_set -> A_set -> Type :=
   | T_root : forall r : Vertex, Tree (V_single r) A_empty
   | T_leaf :
       forall (v : V_set) (a : A_set) (t : Tree v a) (f n : Vertex),
@@ -53,9 +53,9 @@ Proof.
         red; intros He; elim n0.
         rewrite <- He; trivial.
 
-        red; intro; elim n0; apply (G_ina_inv2 v0 a0 H n f); trivial.
+        red; intro; elim n0; apply (G_ina_inv2 v0 a0 X n f); trivial.
 
-        red; intro; elim n0; apply (G_ina_inv1 v0 a0 H f n); trivial.
+        red; intro; elim n0; apply (G_ina_inv1 v0 a0 X f n); trivial.
 
         apply G_eq with (v := v0) (a := a0); trivial.
 Defined.
@@ -98,35 +98,35 @@ Lemma Acyclic_connected_isa_tree :
  forall (v : V_set) (a : A_set), Acyclic v a -> Connected v a -> Tree v a.
 Proof.
         intros v a ac; elim ac; intros.
-        elim (Connected_not_empty _ _ H); auto.
+        elim (Connected_not_empty _ _ X); auto.
 
         apply T_eq with (v := V_single x) (a := A_empty).
-        symmetry ; apply (C_minus_isolated_left _ _ H0 x).
+        symmetry ; apply (C_minus_isolated_left _ _ X0 x).
         apply V_in_left; apply V_in_single.
 
         intros; red; intros; elim n.
-        apply (AC_ina_inv1 _ _ _ _ ac0 H1).
+        apply (AC_ina_inv1 _ _ _ _ ac0 H).
 
-        symmetry ; apply (C_minus_isolated_right _ _ H0 x).
+        symmetry ; apply (C_minus_isolated_right _ _ X0 x).
         apply V_in_left; apply V_in_single.
 
         intros; red; intros; elim n.
-        apply (AC_ina_inv1 _ _ _ _ ac0 H1).
+        apply (AC_ina_inv1 _ _ _ _ ac0 H).
 
         apply T_root.
 
         apply T_leaf.
-        apply H.
-        apply (C_minus_pendant _ _ H0 x y).
+        apply X.
+        apply (C_minus_pendant _ _ X0 x y).
         apply V_in_right; trivial.
 
         apply V_in_left; apply V_in_single.
 
         intros.
-        inversion H1.
-        inversion H2; trivial.
+        inversion H.
+        inversion H0; trivial.
 
-        elim n; apply (AC_ina_inv1 _ _ y z ac0 H2).
+        elim n; apply (AC_ina_inv1 _ _ y z ac0 H0).
 
         trivial.
 
@@ -147,7 +147,7 @@ Proof.
 
         trivial.
 
-        apply H; apply C_eq with (v := v') (a := a'); auto.
+        apply X; apply C_eq with (v := v') (a := a'); auto.
 Qed.
 
 End CONNECTED_AND_ACYCLIC.

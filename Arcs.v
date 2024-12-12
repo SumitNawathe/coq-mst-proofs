@@ -29,19 +29,12 @@ Require Export MST.Vertices.
 
 Section ARC.
 
-Inductive Arc : Set :=
+Inductive Arc : Type :=
     A_ends : Vertex -> Vertex -> Arc.
 
 Lemma A_eq_dec : forall a b : Arc, {a = b} + {a <> b}.
 Proof.
-        simple destruct a; simple destruct b; intros.
-        case (V_eq_dec v v1); intros H. 
-        case (V_eq_dec v0 v2); intros H0.
-        left; rewrite H; rewrite H0; trivial.
-
-        right; injection; auto.
-
-        right; injection; auto.
+  intros a b. apply (decideability (a = b)).
 Qed.
 
 Definition A_tail (a : Arc) := match a with

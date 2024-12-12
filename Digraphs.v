@@ -33,7 +33,7 @@ Require Export MST.Arcs.
 
 Section DIGRAPH.
 
-Inductive Digraph : V_set -> A_set -> Set :=
+Inductive Digraph : V_set -> A_set -> Type :=
   | D_empty : Digraph V_empty A_empty
   | D_vertex :
       forall (v : V_set) (a : A_set) (d : Digraph v a) (x : Vertex),
@@ -47,8 +47,7 @@ Inductive Digraph : V_set -> A_set -> Set :=
       forall (v v' : V_set) (a a' : A_set),
       v = v' -> a = a' -> Digraph v a -> Digraph v' a'.
 
-Fixpoint DV_list (v : V_set) (a : A_set) (d : Digraph v a) {struct d} :
- V_list :=
+Fixpoint DV_list (v : V_set) (a : A_set) (d : Digraph v a) {struct d} : list Vertex :=
   match d with
   | D_empty => V_nil
   | D_vertex v' a' d' x _ => x :: DV_list v' a' d'
@@ -129,7 +128,7 @@ Lemma D_union :
  forall (v1 v2 : V_set) (a1 a2 : A_set),
  Digraph v1 a1 -> Digraph v2 a2 -> Digraph (V_union v1 v2) (A_union a1 a2).
 Proof.
-        intros; elim H; intros.
+        intros v1 v2 a1 a2 H H0. elim H; intros.
         apply D_eq with (v := v2) (a := a2).
         symmetry ; apply V_union_neutral.
 

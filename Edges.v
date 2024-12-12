@@ -146,7 +146,7 @@ End EDGE.
 
 Section LIST_OF_EDGES.
 
-Inductive Edge : Set :=
+Inductive Edge : Type :=
     E_ends : Vertex -> Vertex -> Edge.
 
 Inductive E_eq : Edge -> Edge -> Prop :=
