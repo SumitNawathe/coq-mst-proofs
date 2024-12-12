@@ -1,6 +1,4 @@
 Require Export Coq.Init.Specif.
-Require Import Coq.Logic.Classical_Prop.
-Require Import Coq.Logic.Classical_Pred_Type.
 Require Export MST.Graphs.
 Require Export MST.Edges.
 Require Export MST.Vertices.
@@ -8,6 +6,8 @@ Require Export MST.Trees.
 Require Export MST.Connected.
 Require Export MST.Sets.
 Require Export MST.CustomNotations.
+Require Export MST.Logic.
+Require Export MST.SetLogic.
 
 Open Scope uset_scope.
 
@@ -132,89 +132,6 @@ Definition trivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop
 Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
 	A ⊂ V /\ ~ trivial_cut G A.
 
-Lemma empty_iff_not_exists :
-	forall T (A: U_set T), A = ∅ <-> ~ (exists x : T, A x).
-Proof.
-	intros. split; intros H.
-	- intros [x H_Ax]. rewrite H in H_Ax. inversion H_Ax.
-	- apply U_set_eq; intros x; split; intros H'.
-		+ exfalso. apply H. exists x. assumption.
-		+ inversion H'.
-Qed.
-
-Lemma iff_PnQ_nPQ :
-	forall P Q, (P <-> ~Q) -> (~P <-> Q).
-Proof.
-	intros. split; intros H'. unfold not in *.
-	- case (decideable Q); auto. intros HQ. exfalso. apply H'. apply H. assumption.
-	- case (decideable P); auto. intros HP. apply H in HP. contradiction.
-Qed.
-
-Lemma not_empty_iff_exists :
-	forall T (A: U_set T), A <> ∅ <-> (exists x : T, A x).
-Proof.
-	intros. apply iff_PnQ_nPQ. apply empty_iff_not_exists.
-Qed.
-
-Lemma subset_of_each_other :
-	forall {T} (A B : U_set T), A = B <-> (A ⊂ B /\ B ⊂ A).
-Proof.
-	intros. split; intros H.
-	- split; unfold Included; intros x H';
-			[rewrite H in H' | rewrite <- H in H']; assumption.
-	- destruct H as [H_AB H_BA]. apply U_set_eq; intros x; split; intros H';
-			[apply H_AB | apply H_BA]; assumption.
-Qed.
-
-Lemma negate_implication :
-	forall T (P Q: T -> Prop), ~ (forall x, P x -> Q x) <-> (exists x, P x /\ ~ Q x).
-Proof.
-	intros. split; intros H.
-	- apply (pbc (exists x : T, P x /\ ~ Q x)); intros H'.
-		apply H; intros x H_Px. specialize H'.
-		apply (pbc (Q x)); intros HQ.
-		apply H'. exists x. split; assumption.
-	- intros H'. destruct H as [x [HP HnQ]].
-		apply H' in HP. contradiction.
-Qed.
-
-Lemma negate_implication_sets :
-	forall T (P Q: T -> Prop), ~ (forall x, P x -> Q x) <-> (exists x, P x /\ ~ Q x).
-Proof.
-	intros. split; intros H.
-	- apply (pbc (exists x : T, P x /\ ~ Q x)); intros H'.
-		apply H; intros x H_Px. specialize H'.
-		apply (pbc (Q x)); intros HQ.
-		apply H'. exists x. split; assumption.
-	- intros H'. destruct H as [x [HP HnQ]].
-		apply H' in HP. contradiction.
-Qed.
-
-Lemma not_empty_or_included :
-	forall {T} (A B : U_set T), B <> ∅ -> B ⊄ A -> exists x, x ∈ B /\ x ∉ A.
-Proof.
-	intros T A B H_B H_BA.
-	apply (pbc (exists x : T, x ∈ B /\ x ∉ A)); intros H.
-	apply H_BA. intros x HB.
-	apply (pbc (A x)); intros H_nAx.
-	apply H. exists x. split; assumption.
-Qed.
-
-
-Lemma subset_but_not_equal :
-	forall T (A B : U_set T), A ⊂ B -> A <> B -> exists x, x ∈ B /\ x ∉ A.
-Proof.
-	intros T A B H_AB H_A_neq_B.
-	case (decideable (B = ∅)); intros HB.
-	- subst. specialize (subset_empty_is_empty A H_AB) as HA.
-		subst. contradiction.
-	- case (decideable (B ⊂ A)); intros H_BA.
-		+ exfalso. apply H_A_neq_B. apply (subset_of_each_other A B). split; assumption.
-		+ apply not_empty_or_included; assumption.
-Qed.
-
-
-
 Lemma nontrivial_cut_points :
 	forall V E (G: Graph V E) A,
 	nontrivial_cut G A <-> A ⊂ V /\ (exists x, x ∈ A) /\ (exists y, y ∈ V /\ y ∉ A).
@@ -235,9 +152,11 @@ Proof.
 Qed.
 
 
+
+(* Finding edges crossing cut *)
+
 Definition edge_crossing_cut {V : V_set} {E : A_set} (G : Graph V E) (A : V_set) (x y: Vertex) : Prop :=
 	nontrivial_cut G A -> E (A_ends x y) /\ A x /\ ~ A y.
-
 
 Lemma connected_graph_has_edge_crossing_cut :
 	forall V E (G: Graph V E), Connected V E ->
@@ -264,6 +183,34 @@ Proof.
 			unfold edge_crossing_cut; intros H_A_nontrivial.
 			split; try split; assumption.
 Qed.
+
+Lemma find_crossing_edge_on_walk :
+    forall {V E} (G: Graph V E) A x z vl el,
+    nontrivial_cut G A -> x ∈ A -> z ∉ A -> Walk V E x z vl el ->
+    exists u v, edge_crossing_cut G A u v /\ exists vl1 el1 vl2 el2, (Walk V E x u vl1 el1 /|\ Walk V E v z vl2 el2).
+Proof.
+	intros V E G A x z vl. generalize dependent z. generalize dependent x.
+	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_walk;
+	inversion H_walk; subst; try solve [contradiction].
+	case (decideability (h ∈ A)); [intros H_Ah | intros H_nAh].
+	- specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+		inversion H as [u [v [H_cross [vl1 [el1 [vl2 [el2 [H_walk1 H_walk2]]]]]]]].
+		exists u. exists v. split; try solve [assumption].
+		exists (h::vl1). exists ((x ~~ h)::el1). exists vl2. exists el2.
+		split; try solve [simpl; apply f_equal; assumption].
+		+ constructor 2; try solve [assumption].
+		+ assumption.
+	- exists x. exists h. split.
+		+ constructor.
+			* assumption.
+			* split; assumption.
+		+ exists nil. exists nil. exists t. exists el0. split.
+			* constructor. assumption.
+			* assumption.
+Qed.
+
+
+
 
 
 
