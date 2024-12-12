@@ -193,14 +193,16 @@ Proof.
 	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_walk;
 	inversion H_walk; subst; try solve [contradiction].
 	case (decideability (h ∈ A)); [intros H_Ah | intros H_nAh].
-	- specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+	- (* h ∈ A -> cross in later part of walk *)
+		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
 		inversion H as [u [v [H_cross [vl1 [el1 [vl2 [el2 [H_walk1 H_walk2]]]]]]]].
 		exists u. exists v. split; try solve [assumption].
 		exists (h::vl1). exists ((x ~~ h)::el1). exists vl2. exists el2.
 		split; try solve [simpl; apply f_equal; assumption].
 		+ constructor 2; try solve [assumption].
 		+ assumption.
-	- exists x. exists h. split.
+	- (* h ∉ A -> x -- h is the cross *)
+		exists x. exists h. split.
 		+ constructor.
 			* assumption.
 			* split; assumption.
