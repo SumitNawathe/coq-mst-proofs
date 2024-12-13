@@ -4,6 +4,8 @@ Require Export MST.Vertices.
 Require Export MST.Trees.
 Require Export MST.Connected.
 Require Export MST.Sets.
+Require Export MST.Cuts.
+Require Export MST.CustomNotations.
 
 Definition is_subgraph (V V' : V_set) (E E' : A_set) (T : Graph V' E') (G : Graph V E) : Prop := 
     V_included V' V /\ A_included E' E.
@@ -14,16 +16,10 @@ Definition is_subtree {V V' : V_set} {E E' : A_set} (T : Tree V' E') (G : Graph 
 Definition is_spanning_tree {V V' : V_set} {E E' : A_set} (T : Tree V' E') (G : Graph V E) : Prop := 
     (V' = V) /\ (is_subtree T G).
 
-(* Really inconvienent to have types for paths, walks, connected graphs, cycles etc. Define propositional statements instead. *)
-(* Also, need lemmas that show equivalence between propositions and types. *)
-
-Definition is_connected {V : V_set} {E : A_set} (G : Graph V E) := 
-	forall (x y : Vertex), V x -> V y -> x <> y -> (Path V E x y (GV_list V E G) (GE_list V E G)).
-
-Lemma connected_if : forall (V : V_set) (E : A_set) (G : Graph V E), is_connected G -> Connected V E. 
-Proof. Admitted.
-
-Lemma connected_onlyif : forall (V : V_set) (E : A_set) (G : Graph V E), Connected V E -> is_connected G.
+Theorem connected_prop :
+	forall {V E} (G: Graph V E), V <> V_empty ->
+	(forall x y, V x -> V y -> {vl : V_list &  {el : E_list &  Walk V E x y vl el}}) ->
+	Connected V E.
 Proof. Admitted.
 
 Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : nat :=
@@ -36,20 +32,79 @@ Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : 
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
 	is_subtree T G -> forall E_T' (T': Tree V E_T'), is_subtree T' G -> st_weight T f <= st_weight T' f.
 
-(* Really inconvienent to have types for paths, walks, connected graphs, cycles etc. Define propositional statements instead. *)
+(*
+Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
+	A ⊂ V /\ ~ trivial_cut G A.
+*)
 
+(* 
 Lemma MST_exists : forall (V : V_set) (E : A_set) (f : A_set -> nat) (G : Connected V E), exists (E_T : A_set) (T: Tree V E_T), is_MST f T G.
-Proof.
+Proof. Admitted.
+*)
 
-(* Algorithm: subgraph starts with one node. Every iteration, add a node maintaining that 
-A is a subgraph of a MST, and A stays a tree. *)
+(* Definition edge_crossing_cut {V : V_set} {E : A_set} (G : Graph V E) (A : V_set) (x y: Vertex) : Prop :=
+	nontrivial_cut G A -> E (A_ends x y) /\ A x /\ ~ A y. *)
 
-Definition is_subset_MST {V : V_set} {A E E_T: A_set} (f : A_set -> nat) (G : Graph V E) :=
-	exists (T : Tree V E_T), is_MST f T G /\ A_included A E_T.
+(* Definition prim_invar1 {V E} (G : Graph V E) {V' E'} (T : Tree V' E') w *)
+
+(* Exchange argument *)
+Lemma join_connected {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Connected V1 E1) (G2 : Connected V2 E2) (x y : Vertex):
+	V1 x -> V2 y -> Connected (V_union V1 V2) (A_union (E_set x y) (A_union E1 E2)).
+Proof. Admitted.
+
+Lemma join_cycle_free {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Acyclic V1 E1) (G2 : Acyclic V2 E2) (u v : Vertex) : 
+	V_inter V1 V2 = V_empty -> V1 u -> V2 v -> Acyclic (V_union V1 V2) (A_union (E_set u v) (A_union E1 E2)).
+Proof. Admitted.
+
+Lemma join_trees {V1 V2 : V_set} {E1 E2 : A_set} (T1 : Tree V1 E1) (T2 : Tree V2 E2) (u v : Vertex) : 
+	V_inter V1 V2 = V_empty -> V1 u -> V2 v -> Tree (V_union V1 V2) (A_union (E_set u v) (A_union E1 E2)).
+Proof. Admitted.
+
+Lemma split_tree :
+	forall {V E} (T: Tree V E) x y, A_included (E_set x y) E ->
+	exists V1 V2 E1 E2 (T1 : Tree V1 E1) (T2 : Tree V2 E2),
+	V_union V1 V2 = V /\ A_union E1 E2 = (E \ (E_set x y)) /\ V1 x /\ V2 y.
+Proof. Admitted.
+
+Lemma tree_has_edge_crossing_cut :
+	forall {V E} (G : Graph V E) (T: Tree V E) (f: A_set -> nat) A,
+	nontrivial_cut G A -> exists x y, edge_crossing_cut G A x y.
+Proof. Admitted.
+
+Lemma tree_edge_crossing_cut_unique :
+	forall {V E} (G : Graph V E) (T: Tree V E) (f: A_set -> nat) A, nontrivial_cut G A ->
+	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
+	(x ~~ y) = (u ~~ v).
+Proof. Admitted.
+
+(* Assume edge weights are unique *)
+Definition light_edge {V E} (G: Graph V E) A x y (w : A_set -> nat) :=
+	edge_crossing_cut G A x y /\ (forall u v, edge_crossing_cut G A u v -> w (E_set x y) < w (E_set u v)).
+
+Definition is_subset_MST {V V_T: V_set} {E E_T: A_set} (w : A_set -> nat) (T : Tree V_T E_T) (G : Graph V E) :=
+	exists E_MST (MST : Tree V E_MST), is_MST w MST G /\ A_included E_T E_MST /\ V_included V_T V.
+
+Theorem light_edge_is_safe :
+	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') A x y w,
+	is_subset_MST w T G -> light_edge G A x y w ->
+	{ T' : Tree (V_union (V_single y) V') (A_union (E_set x y) E') & is_subset_MST w T' G }.
+Proof. Admitted.
 
 
 
 
+
+
+
+(* 
+Approach 1:
+- join trees
+- split trees
+
+Approach 2:
+- show that m=n-1 and connected -> tree
+- show that walk between any two points -> connected (1/2 done)
+ *)
 
 
 
