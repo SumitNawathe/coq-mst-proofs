@@ -184,7 +184,7 @@ Proof.
 			split; try split; assumption.
 Qed.
 
-Lemma find_crossing_edge_on_walk :
+(* Lemma find_crossing_edge_on_walk :
     forall {V E} (G: Graph V E) A x z vl el,
     nontrivial_cut G A -> x ∈ A -> z ∉ A -> Walk V E x z vl el ->
     exists u v, edge_crossing_cut G A u v /\ exists vl1 el1 vl2 el2, (Walk V E x u vl1 el1 /|\ Walk V E v z vl2 el2).
@@ -209,7 +209,37 @@ Proof.
 		+ exists nil. exists nil. exists t. exists el0. split.
 			* constructor. assumption.
 			* assumption.
+Qed. *)
+
+Lemma find_crossing_edge_on_walk' :
+    forall {V E} (G: Graph V E) A x z vl el,
+    nontrivial_cut G A -> x ∈ A -> z ∉ A -> Walk V E x z vl el ->
+    exists u v, edge_crossing_cut G A u v /\
+		exists vl1 el1 vl2 el2 (walk1 : Walk V E x u vl1 el1) (walk2 : Walk V E v z vl2 el2), True.
+Proof.
+	intros V E G A x z vl. generalize dependent z. generalize dependent x.
+	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_walk;
+	inversion H_walk; subst; try solve [contradiction].
+	case (decideability (h ∈ A)); [intros H_Ah | intros H_nAh].
+	- (* h ∈ A -> cross in later part of walk *)
+		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+		inversion H as [u [v [H_cross [vl1 [el1 [vl2 [el2 [H_walk1 H_walk2]]]]]]]].
+		exists u. exists v. split; try solve [assumption].
+		exists (h::vl1). exists ((x ~~ h)::el1). exists vl2. exists el2.
+		split; try solve [simpl; apply f_equal; assumption].
+		+ constructor 2; try solve [assumption].
+		+ assumption.
+	- (* h ∉ A -> x -- h is the cross *)
+		exists x. exists h. split.
+		+ constructor.
+			* assumption.
+			* split; assumption.
+		+ exists nil. exists nil. exists t. exists el0. split.
+			* constructor. assumption.
+			* exists H1. trivial.
 Qed.
+
+
 
 
 

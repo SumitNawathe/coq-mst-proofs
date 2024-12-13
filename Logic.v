@@ -38,24 +38,4 @@ Qed.
 
 
 
-(* Conjunction and disjunction with types *)
-
-Reserved Notation "A /|\ B" (at level 80, right associativity).
-Inductive tand (A B : Type): Prop :=
-	tconj : A -> B -> A /|\ B
-where "A /|\ B" := (tand A B).
-
-Reserved Notation "A \|/ B" (at level 80, right associativity).
-Inductive tor (A B : Type): Prop :=
-	| tor_introl : A -> A \|/ B
-	| tor_intror : B -> A \|/ B
-where "A \|/ B" := (tor A B).
-
-Lemma and_tand : forall A B, A /\ B -> A /|\ B.
-Proof. intros. destruct H. constructor; assumption. Qed.
-
-Lemma or_tor : forall A B, A \/ B -> A \|/ B.
-Proof. intros. destruct H; constructor; assumption. Qed.
-
-
 

@@ -36,8 +36,6 @@
 Require Export Lia.
 Require Export Peano_dec.
 
-Axiom decideability : forall A, {A} + {~ A}.
-
 Theorem gt_n_S : forall n m, n > m -> S n > S m.
 Proof.
   auto with arith.
