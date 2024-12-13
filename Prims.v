@@ -85,12 +85,15 @@ Definition is_subset_MST {V V_T: V_set} {E E_T: A_set} (w : A_set -> nat) (T : T
 	exists E_MST (MST : Tree V E_MST), is_MST w MST G /\ A_included E_T E_MST /\ V_included V_T V.
 
 Theorem light_edge_is_safe :
-	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') A x y w,
-	is_subset_MST w T G -> light_edge G A x y w ->
+	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
+	is_subset_MST w T G -> light_edge G V' x y w ->
 	{ T' : Tree (V_union (V_single y) V') (A_union (E_set x y) E') & is_subset_MST w T' G }.
 Proof. Admitted.
 
-
+Theorem prim_ends :
+	forall {V E} (G: Graph V E) (C: Connected V E) {E'} (T : Tree V E') w,
+	is_subset_MST w T G -> is_MST w T G.
+Proof. intros. unfold is_MST. intros.
 
 
 
