@@ -1,5 +1,5 @@
 COQMFFLAGS := -Q . MST
-ALLVFILES := Sets.v Enumerated.v Vertices.v Arcs.v Connected.v Degrees.v Digraphs.v Dipaths.v Edges.v Graphs.v Paths.v Trees.v Acyclic.v MST.v Logic.v CustomNotations.v SetLogic.v Cuts.v TreeLemmas.v
+ALLVFILES := Sets.v Enumerated.v Vertices.v Arcs.v Connected.v Degrees.v Digraphs.v Dipaths.v Edges.v Graphs.v Paths.v Trees.v Acyclic.v MST.v Logic.v CustomNotations.v SetLogic.v Cuts.v OrderSizeLemmas.v
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq

@@ -75,6 +75,17 @@ Proof.
 	intros. apply iff_PnQ_nPQ. apply empty_iff_not_exists.
 Qed.
 
+Remark union_single_without_means_empty :
+	forall T (V : U_set T) x, ⟨x⟩ ∪ V = ⟨x⟩ -> x ∉ V -> V = ∅.
+Proof.
+	intros T V x H1 H2.
+	apply empty_iff_not_exists. intros [y Hy].
+	case (decideability (x = y)); intros Hxy.
+	- subst. contradiction.
+	- assert (Hxv : y ∈ (⟨x⟩ ∪ V)) by (constructor 2; assumption).
+		rewrite H1 in Hxv. inversion Hxv. contradiction.
+Qed.
+
 
 
 (* Finding points in subsets *)

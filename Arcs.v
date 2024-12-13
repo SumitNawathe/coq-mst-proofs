@@ -34,7 +34,14 @@ Inductive Arc : Type :=
 
 Lemma A_eq_dec : forall a b : Arc, {a = b} + {a <> b}.
 Proof.
-  intros a b. apply (decideability (a = b)).
+        simple destruct a; simple destruct b; intros.
+        case (V_eq_dec v v1); intros H. 
+        case (V_eq_dec v0 v2); intros H0.
+        left; rewrite H; rewrite H0; trivial.
+
+        right; injection; auto.
+
+        right; injection; auto.
 Qed.
 
 Definition A_tail (a : Arc) := match a with

@@ -28,12 +28,16 @@ Require Export MST.Enumerated.
 
 Section VERTEX.
 
-Inductive Vertex : Type :=
+Inductive Vertex : Set :=
     index : nat -> Vertex.
 
 Lemma V_eq_dec : forall x y : Vertex, {x = y} + {x <> y}.
 Proof.
-        intros x y. apply (decideability (x = y)).
+        simple destruct x; simple destruct y; intros.
+        case (eq_nat_dec n n0); intros H.
+        left; rewrite H; trivial.
+
+        right; injection; trivial.
 Qed.
 
 Definition V_list := list Vertex.
