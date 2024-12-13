@@ -4,245 +4,93 @@ Require Export MST.Sets.
 Require Export MST.CustomNotations.
 Require Export MST.Logic.
 Require Export MST.SetLogic.
+Require Export MST.Cuts.
 
 Open Scope uset_scope.
 
 
-(* Graph vertex list *)
 
-Lemma V_in_graph_list :
-	forall {V E} x (G: Graph V E), x ∈ V -> In x (GV_list V E G).
+
+(* Connected property *)
+Theorem connected_prop :
+	forall {V E} (G: Graph V E), V <> ∅ ->
+	(forall x y, x ∈ V -> y ∈ V -> {vl : V_list &  {el : E_list &  Walk V E x y vl el}}) ->
+	Connected V E.
 Proof.
-	intros V E x G. generalize dependent x. induction G; intros u Hu.
-	- inversion Hu.
-	- simpl. inversion Hu.
-		+ left. subst. inversion H. reflexivity.
-		+ right. apply IHG. assumption.
-	- simpl. apply IHG. assumption.
-	- apply IHG. subst. assumption.
-Qed.
+	intros V E G. induction G as [| V E G IHG x H_nVx | | ]; intros HV H; subst.
+	- unfold V_empty in HV. contradiction.
+	- (* case: adding a vertex to a graph *)
+		unfold V_union in *; unfold V_single in *.
+		destruct (decideable (V = ∅)) as [HV' | HV'].
+		+ (* V empty -> graph is singlecon -> singleton connected. *)
+			specialize (G_empty_empty V E G HV') as HE.
+			subst. unfold A_empty.
+			rewrite single_union_empty. constructor.
+		+ (* V nonempty -> get new point y <> x *)
+			assert (HV'' : V <> ∅) by assumption.
+			apply not_empty_iff_exists' in HV'. destruct HV' as [y H_Vy].
+			assert (H_xy : x <> y) by (intros H_xy; subst; contradiction).
+			(* use walk to get an edge from old graph to new vertex *)
+			assert (Hx' : x ∈ (⟨x⟩ ∪ V)) by (repeat constructor).
+			assert (Hy' : y ∈ (⟨x⟩ ∪ V)) by (constructor 2; assumption).
+			(* walk can technically have loop edges -> bad for us *)
+			(* convert to path, get next vertex *)
+			destruct (H x y Hx' Hy') as [vlw [elw w]].
+			specialize (Walk_to_path _ _ _ _ _ _ w) as [vlp [elp p]].
+			inversion p; subst; try solve [contradiction].
+			(* setup to apply C_leaf *)
+			assert (HE' : E = (E_set y0 x) ∪ E). {
+				apply U_set_eq; intros e; split; intros H_e.
+				- constructor 2; assumption.
+				- inversion H_e; subst; try solve [assumption].
+					inversion H7; subst.
+					+ apply (G_non_directed _ _ G). assumption.
+					+ assumption.
+			}
+			rewrite HE'.
+			assert (H_x_y0 : x <> y0). {
+				intros H_x_y0. subst y0.
+				inversion p; subst. contradiction.
+			}
+			assert (H_Vy0 : y0 ∈ (⟨x⟩ ∪ V)) by (apply (P_endx_inv _ _ _ _ _ _ H0)).
+			assert (H_Vy0' : y0 ∈ V). {
+				inversion H_Vy0; subst.
+				- inversion H7. contradiction.
+				- assumption.
+			}
 
-Lemma V_in_list_graph :
-	forall {V E} x (G: Graph V E), In x (GV_list V E G) -> x ∈ V.
-Proof.
-	intros V E x G. generalize dependent x. induction G; intros u Hu.
-	- inversion Hu.
-	- inversion Hu.
-		+ subst. repeat constructor.
-		+ right. apply IHG. assumption.
-	- simpl in Hu. apply IHG. assumption.
-	- simpl in Hu. subst. apply IHG. assumption.
-Qed.
-
-Lemma V_in_graph_iff_list :
-	forall {V E} x (G: Graph V E), x ∈ V <-> In x (GV_list V E G).
-Proof. intros. split; [apply V_in_graph_list | apply V_in_list_graph]. Qed.
-
-
-
-(* Tree vertex list *)
-
-Fixpoint TV_list {V : V_set} {E : A_set} (T : Tree V E) {struct T} : V_list :=
-  match T with
-	| T_root r => r :: V_nil
-	| T_leaf v e t f n _ _ => f :: TV_list t
-	| T_eq v v' a a' _ _ t => TV_list t
-  end.
-
-Lemma V_in_tree_list :
-	forall {V E} x (T: Tree V E), x ∈ V -> In x (TV_list T).
-Proof.
-	intros V E x T. generalize dependent x. induction T; intros x Hx.
-	- inversion Hx. subst. repeat constructor.
-	- inversion Hx.
-		+ inversion H. subst. constructor. reflexivity.
-		+ subst. constructor 2. apply IHT. assumption.
-	- apply IHT. subst. assumption.
-Qed.
-
-Lemma V_in_list_tree :
-	forall {V E} x (T: Tree V E), In x (TV_list T) -> x ∈ V.
-Proof.
-	intros V E x T. generalize dependent x. induction T; intros x Hx.
-	- inversion Hx.
-		+ subst. constructor.
-		+ inversion H.
-	- inversion Hx.
-		+ subst. constructor. constructor.
-		+ constructor 2. apply IHT. assumption.
-	- simpl TV_list in Hx. subst. apply IHT. assumption.
-Qed.
-
-Lemma V_in_tree_iff_list :
-	forall {V E} x (T: Tree V E), x ∈ V <-> In x (TV_list T).
-Proof. intros. split; [apply V_in_tree_list | apply V_in_list_tree]. Qed.
-
-
-
-(* Graph vlist = Tree vlist *)
-
-Lemma GV_list_TV_list :
-	forall {V E} (G: Graph V E) (T: Tree V E) x, In x (GV_list V E G) <-> In x (TV_list T).
-Proof.
-	intros. split; intros H.
-	- apply V_in_list_graph in H. apply V_in_tree_iff_list. assumption.
-	- apply V_in_list_tree in H. apply V_in_graph_iff_list. assumption.
-Qed.
+			(* last thing: show Connected V E by IH *)
+			assert (C : Connected V E). {
+				apply (IHG HV''). intros u v Hu Hv.
+				(* for arbitrary u v, must show that we can get a walk *)
+			}
+			fold V_union. fold A_union. fold V_single.
+			apply (C_leaf V E C y0 x H_Vy0' H_nVx).
 
 
 
 
 
-
-
-
-
-(* Graph arc/edge list *)
-
-Lemma A_in_graph_list :
-	forall {V A} a (G: Graph V A), a ∈ A -> In a (GA_list V A G).
-Proof.
-	intros V A a G. generalize dependent a. induction G.
-	- intros a Ha. inversion Ha.
-	- intros arc Harc. simpl. apply IHG. assumption.
-	- intros arc Harc. simpl. inversion Harc.
-		+ subst. inversion H.
-			* left. reflexivity.
-			* right. left. reflexivity.
-		+ right. right. apply IHG. assumption.
-	- intros arc Harc. simpl. apply IHG. subst. assumption.
-Qed.
-
-Lemma E_in_graph_list :
-	forall {V E} x y (G: Graph V E), (x -- y) ∈ E -> E_in (x ~~ y) (GE_list V E G).
-Proof.
-	intros V E x y G. generalize dependent y. generalize dependent x.
-	induction G; intros p q H_pq; simpl in H_pq.
-	- inversion H_pq.
-	- apply IHG. assumption.
-	- simpl. case (E_eq_dec (p ~~ q) (x ~~ y)); intros H.
-		+ constructor.
-		+ apply IHG. inversion H_pq; subst.
-			* inversion H0; subst; exfalso; apply H; constructor.
+	- unfold A_union in *.
+		+ apply IHG.
 			* assumption.
-	- simpl. apply IHG. subst. assumption.
-Qed.
+			* 
 
-Lemma A_in_list_graph :
-	forall {V A} a (G: Graph V A), In a (GA_list V A G) -> a ∈ A.
+
+
+(* Join connected *)
+Lemma join_connected :
+	forall {V1 E1} (G2: Connected V1 E1) {V2 E2} (G2 : Connected V2 E2) x y,
+	x ∈ V1 -> y ∈ V2 -> Connected (V1 ∪ V2) ((E_set x y) ∪ (E1 ∪ E2)).
 Proof.
-	intros V A a G. generalize dependent a.
-	induction G; intros arc Harc; simpl in Harc.
-	- inversion Harc.
-	- apply IHG. assumption.
-	- destruct Harc as [Harc | Harc].
-		+ constructor. inversion Harc. subst. constructor.
-		+ destruct Harc as [Harc | Harc].
-			* inversion Harc; subst. constructor. constructor 2.
-			* constructor 2. apply IHG. assumption.
-	- subst. apply IHG. assumption.
-Qed.
-
-Lemma E_in_list_graph :
-	forall {V E} x y (G: Graph V E), E_in (x ~~ y) (GE_list V E G) -> (x -- y) ∈ E \/ (y -- x) ∈ E.
-Proof.
-	intros V E x y G. generalize dependent y. generalize dependent x.
-	induction G; intros p q H_pq; simpl in H_pq.
-	- inversion H_pq.
-	- apply IHG. assumption.
-	- generalize dependent H_pq. case (E_eq_dec (p ~~ q) (x ~~ y)); intros H_pq H.
-		+ inversion H_pq; subst; [left | right]; repeat constructor.
-		+ apply IHG in H. inversion H; [left | right]; constructor 2; assumption.
-	- subst. apply IHG. assumption.
-Qed.
-
-Lemma E_in_symmetry :
-	forall x y E_lst, E_in (x ~~ y) E_lst -> E_in (y ~~ x) E_lst.
-Proof.
-	intros x y E_lst. generalize dependent y. generalize dependent x.
-	induction E_lst; intros.
-	- contradiction.
-	- simpl in H. generalize dependent H. case (E_eq_dec (x ~~ y) a); intros Hxy H.
-		+ inversion Hxy; subst; simpl.
-			* case (E_eq_dec (y ~~ x) (x ~~ y)); intros Hyx.
-				-- constructor.
-				-- exfalso. apply Hyx. apply E_rev.
-			* case (E_eq_dec (y ~~ x) (y ~~ x)); intros Hyx.
-				-- constructor.
-				-- exfalso. apply Hyx. constructor.
-		+ simpl. case (E_eq_dec (y ~~ x) a); intros Hyx.
-			* inversion Hyx; subst; constructor.
-			* apply IHE_lst. assumption.
-Qed.
-
-Lemma A_in_graph_iff_list :
-	forall {V A} x y (G: Graph V A), (x -- y) ∈ A <-> In (x -- y) (GA_list V A G).
-Proof. intros. split; [apply A_in_graph_list | apply A_in_list_graph]. Qed.
-
-Lemma E_in_graph_iff_list :
-	forall {V E} x y (G: Graph V E), E_in (x ~~ y) (GE_list V E G) <-> (x -- y) ∈ E \/ (y -- x) ∈ E.
-Proof.
-	intros. split; intros H.
-	- apply E_in_list_graph in H. assumption.
-	- destruct H.
-		+ apply E_in_graph_list. assumption.
-		+ apply E_in_symmetry. apply E_in_graph_list. assumption.
-Qed.
-
-
-(* 
-(* Tree arc list *)
-
-Fixpoint TA_list {V : V_set} {E : A_set} (T : Tree V E) {struct T} : A_list :=
-	match T with
-		| T_root r => A_nil
-		| T_leaf v e t f n _ _ => (n -- f) :: TA_list t
-		| T_eq v v' a a' _ _ t => TA_list t
-	end.
-
-Lemma A_in_tree_list :
-	forall {V A} x y (T: Tree V A), (x -- y) ∈ A -> In (x -- y) (TA_list T).
-Proof.
-	intros V A x y T. generalize dependent y. generalize dependent x.
-	induction T; intros p q H_pq; simpl in H_pq.
-	- inversion H_pq.
-	- simpl. destruct H_pq as [arc | arc].
-		+ left. 
-	- inversion Hx.
-		+ inversion H. subst. constructor. reflexivity.
-		+ subst. constructor 2. apply IHT. assumption.
-	- apply IHT. subst. assumption.
-Qed.
-
-Lemma V_in_list_tree :
-	forall {V E} x (T: Tree V E), In x (TV_list T) -> x ∈ V.
-Proof.
-	intros V E x T. generalize dependent x. induction T; intros x Hx.
-	- inversion Hx.
-		+ subst. constructor.
-		+ inversion H.
-	- inversion Hx.
-		+ subst. constructor. constructor.
-		+ constructor 2. apply IHT. assumption.
-	- simpl TV_list in Hx. subst. apply IHT. assumption.
-Qed.
-
-Lemma V_in_tree_iff_list :
-	forall {V E} x (T: Tree V E), x ∈ V <-> In x (TV_list T).
-Proof. intros. split; [apply V_in_tree_list | apply V_in_list_tree]. Qed.
 
 
 
+(* Join cycle free *)
 
 
 
-
-
-
-
-Theorem tree_paths :
-	forall {V: V_set} {E: A_set} (T: Tree V E) x y,
-	x ∈ V -> y ∈ V -> exists (vl : V_list) (el : E_list), Path V E x y vl el. *)
+(* Join trees *)
 
 
 

@@ -75,6 +75,10 @@ Proof.
 	intros. apply iff_PnQ_nPQ. apply empty_iff_not_exists.
 Qed.
 
+Lemma not_empty_iff_exists' :
+	forall T (A: U_set T), A <> ∅ -> {x : T & A x}.
+Proof. Admitted.
+
 Remark union_single_without_means_empty :
 	forall T (V : U_set T) x, ⟨x⟩ ∪ V = ⟨x⟩ -> x ∉ V -> V = ∅.
 Proof.
@@ -84,6 +88,14 @@ Proof.
 	- subst. contradiction.
 	- assert (Hxv : y ∈ (⟨x⟩ ∪ V)) by (constructor 2; assumption).
 		rewrite H1 in Hxv. inversion Hxv. contradiction.
+Qed.
+
+Lemma single_union_empty :
+	forall T (x : T), ⟨x⟩ ∪ ∅ = ⟨x⟩.
+Proof.
+	intros. apply U_set_eq. intros y. split; intros H.
+	- inversion H; [assumption | contradiction].
+	- constructor; assumption.
 Qed.
 
 
