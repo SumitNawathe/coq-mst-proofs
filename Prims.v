@@ -176,7 +176,19 @@ Proof.
 	unfold V_union in *; unfold A_union in *.
 	rewrite H_V1V2_cup in T_new.
 	(* show that T_new has smaller weight *)
-	assert (H_MSTw_better : E_MST = E_set u v ∪ (E1 ∪ E2)) by admit.
+	assert (H_MSTw_better : E_MST = E_set u v ∪ (E1 ∪ E2)). {
+		apply U_set_eq. intros a. split; intros Ha.
+		- case (A_eq_dec a (u -- v)); intros H_a_uv; try solve [subst; left; constructor].
+			case (A_eq_dec a (v -- u)); intros H_a_vu; try solve [subst; left; constructor].
+			right. rewrite H_VE1E2. apply In_differ.
+			+ assumption.
+			+ intros H_uva. inversion H_uva; symmetry in H; contradiction.
+		- case (A_eq_dec a (u -- v)); intros H_a_uv; try solve [subst; assumption].
+			case (A_eq_dec a (v -- u)); intros H_a_vu; try solve [subst; apply (G_non_directed _ _ G_MST); assumption].
+			inversion Ha; subst.
+			+ inversion H; symmetry in H0; contradiction.
+			+ rewrite H_VE1E2 in H. inversion H. assumption.
+	}
 	subst E_MST.
 	specialize (split_tree_weight_lemma MST T1 T2 w) as H_w1.
 	specialize (split_tree_weight_lemma T_new T1 T2 w) as H_w2.
@@ -199,6 +211,11 @@ Proof.
 	specialize (H_MST_weight_cond _ T_new H_Tnew_subtree) as H_Tnew_bigger.
 	lia.
 Admitted.
+
+
+
+
+
 
 
 
