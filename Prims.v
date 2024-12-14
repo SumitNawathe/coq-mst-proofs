@@ -188,6 +188,27 @@ Proof.
 		+ apply H0. assumption.
 Qed.
 
+Lemma tree_Vempty_contra : 
+	forall {V E} (T: Tree V E), V = V_empty -> False.
+Proof.
+	intros. induction T.
+	- subst.
+		assert (H1 : V_single r <> V_empty). {
+			apply U_set_diff. exists r. split.
+			- constructor.
+			- intros H'. inversion H'.
+		}
+		contradiction.
+	- subst.
+		assert (H3 : V_union (V_single f) v <> V_empty). {
+			apply U_set_diff. exists f. split.
+			- constructor. constructor.
+			- intros H'. inversion H'.
+		}
+		contradiction.
+	- apply IHT. subst. reflexivity.
+Qed.		
+
 
 Theorem light_edge_is_safe :
 	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
@@ -205,13 +226,10 @@ Proof.
 	assert (H_xy_crossing' : edge_crossing_cut G V' x y) by assumption.
 	unfold edge_crossing_cut in H_xy_crossing.
 	assert (H_V'_nontriv : nontrivial_cut G V'). {
-		apply nontrivial_cut_points. clear H_xy_crossing'.
-		split; [apply H_V'_sub_V | split].
-		- induction T.
-			+ exists r. constructor.
-			+ exists f. repeat constructor.
-			+ subst. exact (IHT H_V'_neq_V H_ET_EMST H_V'_sub_V H_xy_crossing H_xy_light).
-		- apply (subset_but_not_equal _ _ _ H_V'_sub_V H_V'_neq_V).
+		split; try solve [assumption].
+		intros H_V'triv. destruct H_V'triv as [H_V'1 | H_V'2].
+		- contradiction.
+		- apply (tree_Vempty_contra T H_V'2).
 	}
 	destruct (H_xy_crossing H_V'_nontriv) as [H_EMST_xy [H_V'x H_nV'y]]; clear H_xy_crossing.
 	(* tree MST has edge crossing cut *)
@@ -349,7 +367,6 @@ Proof.
 					}
 					contradiction.
 		}
-		(* TODO: need similar extension as for vl to solve ^ *)
 		specialize (P_step V E_MST v u v pvl pel path_uv H_Vv
 			H_EMST_vu H_vnu H_u_not_in_pvl H_vrefl H_no_vu_in_pel) as p_cyc.
 		(* cycle in tree -> contradiction *)

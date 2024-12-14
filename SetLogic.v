@@ -3,6 +3,16 @@ Require Export MST.CustomNotations.
 Require Export MST.Logic.
 
 
+(* Strong decideability for sets *)
+(* 
+For our proofs, we are assuming that all sets are finite;
+that is, there is some finite superset containing all sets we are working with.
+We are mainly working with sets of vertices and edges; for both of those, equality is decideable.
+Thus, the following relations on finite sets should be decideable
+*)
+
+Axiom set_eq_dec : forall {T} (A B : U_set T), {A = B} + {A <> B}.
+Axiom set_subset_dec : forall {T} (A B : U_set T), {A ⊆ B} + {A ⊄ B}.
 
 (* Utlities *)
 
@@ -70,12 +80,6 @@ Proof.
 Qed.
 
 Lemma not_empty_iff_exists :
-	forall T (A: U_set T), A <> ∅ <-> (exists x : T, A x).
-Proof.
-	intros. apply iff_PnQ_nPQ. apply empty_iff_not_exists.
-Qed.
-
-Lemma not_empty_iff_exists' :
 	forall T (A: U_set T), A <> ∅ -> {x : T & A x}.
 Proof. Admitted.
 
@@ -103,23 +107,17 @@ Qed.
 (* Finding points in subsets *)
 
 Lemma not_empty_or_included :
-	forall {T} (A B : U_set T), B <> ∅ -> B ⊄ A -> exists x, x ∈ B /\ x ∉ A.
-Proof.
-	intros T A B H_B H_BA.
-	apply (pbc (exists x : T, x ∈ B /\ x ∉ A)); intros H.
-	apply H_BA. intros x HB.
-	apply (pbc (A x)); intros H_nAx.
-	apply H. exists x. split; assumption.
-Qed.
+	forall {T} (A B : U_set T), B <> ∅ -> B ⊄ A -> {x & x ∈ B & x ∉ A}.
+Proof. Admitted.
 
 Lemma subset_but_not_equal :
-	forall T (A B : U_set T), A ⊆ B -> A <> B -> exists x, x ∈ B /\ x ∉ A.
+	forall T (A B : U_set T), A ⊆ B -> A <> B -> {x & x ∈ B & x ∉ A}.
 Proof.
 	intros T A B H_AB H_A_neq_B.
-	case (decideability (B = ∅)); intros HB.
+	case (set_eq_dec B (∅)); intros HB.
 	- subst. specialize (subset_empty_is_empty A H_AB) as HA.
 		subst. contradiction.
-	- case (decideability (B ⊆ A)); intros H_BA.
+	- case (set_subset_dec B A); intros H_BA.
 		+ exfalso. apply H_A_neq_B. apply (subset_of_each_other A B). split; assumption.
 		+ apply not_empty_or_included; assumption.
 Qed.

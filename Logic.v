@@ -5,6 +5,7 @@ Require Import Coq.Logic.Decidable.
 
 
 (* Decideability and proof by contradiction *)
+
 Axiom decideability : forall P, decidable P.
 
 Lemma pbc : forall P, (~P -> False) -> P.

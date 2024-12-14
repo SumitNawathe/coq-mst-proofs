@@ -7,3 +7,4 @@
 Makefile.coq*
 .DS_Store
 *.coq.d
+.lia.cache

@@ -42,35 +42,6 @@ Qed.
 
 
 
-(* Decideability axioms *)
-
-Axiom decideable : forall P, {P} + {~P}.
-
-Lemma vertex_subset_decideable :
-	forall V E (G: Graph V E) A, A ⊆ V -> forall x, {x ∈ A} + {x ∉ A}.
-Proof.
-	intros. destruct (decideable (x ∈ A)); auto.
-Qed.
-
-Lemma pbc : forall P, (~P -> False) -> P.
-Proof.
-	intros. destruct (decideable P); solve [assumption | contradiction].
-Qed.
-
-Ltac proof_by_contradiction := apply pbc; match goal with
-	| [ |- ~ (exists x, ?P x) -> False ] => idtac
-end.
-
-Lemma not_exists_elem : forall U (A: U_set U),
-	~ (exists x, x ∈ A) -> (forall x, x ∉ A).
-Proof.
-	intros; intros H_Ax. apply H. exists x. assumption.
-Qed.
-
-(* Lemma is_empty_dec : forall T (A: U_set U), {A = ∅} + {A <> ∅}. *)
-
-
-
 (* Subgraph/subtree definitions *)
 
 Definition is_subgraph {V V' : V_set} {E E' : A_set} (G' : Graph V' E') (G : Graph V E) : Prop := 
@@ -132,23 +103,35 @@ Definition trivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop
 Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
 	A ⊆ V /\ ~ trivial_cut G A.
 
-Lemma nontrivial_cut_points :
+Lemma nontrivial_cut_point_inside :
 	forall V E (G: Graph V E) A,
-	nontrivial_cut G A <-> A ⊆ V /\ (exists x, x ∈ A) /\ (exists y, y ∈ V /\ y ∉ A).
+	nontrivial_cut G A -> {x & x ∈ A}.
 Proof.
-	intros. split; intros H.
-	- inversion H as [H_AV H_A_nontriv].
-		unfold not in H_A_nontriv. unfold trivial_cut in H_A_nontriv.
-		split; [solve [assumption] | split].
-		+ proof_by_contradiction. intros H_contra. apply H_contra.
-			destruct (decideable (A = ∅)); try solve [exfalso; auto].
-			exfalso. apply H_A_nontriv. auto.
-			apply not_empty_iff_exists in n as [x H_Ax].
-			exfalso. apply H_contra. exists x. assumption.
-		+ destruct (decideable (A = V)); try solve [exfalso; auto].
-			apply subset_but_not_equal; assumption.
-	- destruct H as [H_AV [H1 H2]]. unfold nontrivial_cut. split; try solve [assumption].
-		intros H_Gtriv. inversion H_Gtriv; subst; [destruct H2 | destruct H1]; intuition.
+	intros.
+	inversion H as [H_AV H_A_nontriv].
+	unfold not in H_A_nontriv. unfold trivial_cut in H_A_nontriv.
+	case (set_eq_dec A (∅)); intros H_A1; try solve [exfalso; apply H_A_nontriv; auto].
+	apply (not_empty_iff_exists) in H_A1. assumption.
+Qed.
+
+Lemma nontrivial_cut_point_outside :
+	forall V E (G: Graph V E) A,
+	nontrivial_cut G A -> {y & y ∈ V & y ∉ A}.
+Proof.
+	intros.
+	inversion H as [H_AV H_A_nontriv].
+	unfold not in H_A_nontriv. unfold trivial_cut in H_A_nontriv.
+	case (set_eq_dec A V); intros H_A2; try solve [exfalso; apply H_A_nontriv; auto].
+	specialize (subset_but_not_equal _ _ _ H_AV H_A2) as H'. assumption.
+Qed.
+
+Lemma points_nontrivial_cut :
+	forall V E (G: Graph V E) A x y,
+	A ⊆ V -> x ∈ A -> y ∈ V -> y ∉ A -> nontrivial_cut G A.
+Proof.
+	intros V E G A x y H_AV H_Ax H_Vy H_not_Ay.
+	split; try solve [assumption].
+	intros H_Atriv. destruct H_Atriv as [H_A1 | H_A2]; subst; contradiction.
 Qed.
 
 
@@ -165,8 +148,9 @@ Lemma connected_graph_has_edge_crossing_cut :
 Proof.
 	intros V E G H_connected A H_A_cut.
 	(* Since A nontrivial, get vertex x in A and y not in A *)
-	apply nontrivial_cut_points in H_A_cut.
-	destruct H_A_cut as [H_VA [[x H_Ax] [y [H_Vy H_not_Ay]]]].
+	destruct (nontrivial_cut_point_inside V E G A H_A_cut) as [x H_Ax].
+	destruct (nontrivial_cut_point_outside V E G A H_A_cut) as [y H_Vy H_not_Ay].
+	destruct H_A_cut as [H_VA H_A_nontriv].
 	apply H_VA in H_Ax as H_Vx.
 	(* Get path between these vertices *)
 	specialize (Connected_path V E H_connected x y H_Vx H_Vy) as [vl [el H_path]].
@@ -176,7 +160,7 @@ Proof.
 	   contradiction.
 	- (* case analysis: does edge x--h cross the cut *)
 	  (* case (Vset_dec A h); intros H_Ah. *)
-		case (vertex_subset_decideable V E G A H_VA h); intros H_Ah.
+	  	case (decideability (h ∈ A)); intros H_Ah.
 	  + apply H_VA in H_Ah as H_Vh.
 	  	apply (IHt h H_Ah H_Vh y H_Vy H_not_Ay el0 H1).
 		+ exists x. exists h.
@@ -184,34 +168,7 @@ Proof.
 			split; try split; assumption.
 Qed.
 
-(* Lemma find_crossing_edge_on_walk :
-    forall {V E} (G: Graph V E) A x z vl el,
-    nontrivial_cut G A -> x ∈ A -> z ∉ A -> Walk V E x z vl el ->
-    exists u v, edge_crossing_cut G A u v /\ exists vl1 el1 vl2 el2, (Walk V E x u vl1 el1 /|\ Walk V E v z vl2 el2).
-Proof.
-	intros V E G A x z vl. generalize dependent z. generalize dependent x.
-	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_walk;
-	inversion H_walk; subst; try solve [contradiction].
-	case (decideability (h ∈ A)); [intros H_Ah | intros H_nAh].
-	- (* h ∈ A -> cross in later part of walk *)
-		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
-		inversion H as [u [v [H_cross [vl1 [el1 [vl2 [el2 [H_walk1 H_walk2]]]]]]]].
-		exists u. exists v. split; try solve [assumption].
-		exists (h::vl1). exists ((x ~~ h)::el1). exists vl2. exists el2.
-		split; try solve [simpl; apply f_equal; assumption].
-		+ constructor 2; try solve [assumption].
-		+ assumption.
-	- (* h ∉ A -> x -- h is the cross *)
-		exists x. exists h. split.
-		+ constructor.
-			* assumption.
-			* split; assumption.
-		+ exists nil. exists nil. exists t. exists el0. split.
-			* constructor. assumption.
-			* assumption.
-Qed. *)
-
-Lemma find_crossing_edge_on_walk' :
+Lemma find_crossing_edge_on_walk :
     forall {V E} (G: Graph V E) A x z vl el,
     nontrivial_cut G A -> x ∈ A -> z ∉ A -> Walk V E x z vl el ->
     exists u v, edge_crossing_cut G A u v /\
@@ -241,33 +198,24 @@ Qed.
 
 
 
-
-
-
-
-
-(* Lemma weight_functions_good : forall V E (T: Tree V E) (f: (A_set -> nat)) x y, f (E_set x y) = f (E_set y x).
+Lemma tree_has_edge_crossing_cut :
+	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
+	{x: Vertex & {y: Vertex & (x -- y) ∈ E /\ edge_crossing_cut G A x y}}.
 Proof.
-	intros. apply f_equal. apply E_set_eq.
-Qed. *)
-Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : nat :=
-	match T with
-	| T_root _ => 0
-	| T_leaf _ _ T x y _ _ => f (E_set x y) + (st_weight T f)
-	| T_eq V _ A _ _ _ T => (st_weight T f)
-	end.
-
-Definition MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
-	is_subtree T G -> forall E_T' (T': Tree V E_T'), is_subtree T' G -> st_weight T f <= st_weight T' f.
+	intros.
+	specialize (Tree_isa_connected _ _ T) as Tcon.
+	(* apply (nontrivial_cut_points) in H.
+	destruct H as [H_AV [H_Ax H_Ay]]. *)
+Admitted.
 
 
 
-Theorem graph_cut_theorem :
-	forall V E (G: Graph V E) A, nontrivial_cut G A ->
-	forall (f: A_set -> nat) x y, edge_crossing_cut G A x y ->
-	(forall x' y', edge_crossing_cut G A x' y' -> f (E_set x y) < f (E_set x' y')) ->
-	forall (T : Tree V E), MST f T G -> E (A_ends x y).
-Proof.
-	intros V E G A H_A_nontriv f x y H_xy_cross_A B_xy_smallest T H_T_MST.
-	Abort.
 
+
+
+
+Lemma tree_edge_crossing_cut_unique :
+	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
+	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
+	x = u /\ y = v.
+Proof. Admitted.

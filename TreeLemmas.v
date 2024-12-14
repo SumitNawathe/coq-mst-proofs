@@ -28,7 +28,7 @@ Proof.
 			rewrite single_union_empty. constructor.
 		+ (* V nonempty -> get new point y <> x *)
 			assert (HV'' : V <> ∅) by assumption.
-			apply not_empty_iff_exists' in HV'. destruct HV' as [y H_Vy].
+			apply not_empty_iff_exists in HV'. destruct HV' as [y H_Vy].
 			assert (H_xy : x <> y) by (intros H_xy; subst; contradiction).
 			(* use walk to get an edge from old graph to new vertex *)
 			assert (Hx' : x ∈ (⟨x⟩ ∪ V)) by (repeat constructor).
