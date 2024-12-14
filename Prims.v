@@ -121,6 +121,12 @@ Proof. intros V V' E E' T. generalize dependent E'. generalize dependent V'. ind
 	+ simpl. specialize IHT' with (w := w); subst. apply IHT' in H. lia.
 Admitted.
 
+Lemma split_tree_weight_lemma :
+	forall {V V1 E1 V2 E2 x y}
+	(T: Tree V (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
+	st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
+Proof. Admitted.
+
 Theorem light_edge_is_safe :
 	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
 	V' <> V -> is_subset_MST w T G -> light_edge G V' x y w ->
@@ -227,47 +233,10 @@ Proof.
 	lia.
 Admitted.
 
-
-Lemma split_tree_weight_lemma :
-	forall V V1 E1 V2 E2 x y
-	(T: Tree V (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
-	st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
-Proof. Admitted.
-
-
-
-
-Lemma tree_empty_edge_zero_weight : 
-  forall {V} (T : Tree V A_empty) w, st_weight T w <= 0.
-Proof.
-    intros. remember A_empty as A.
-    unfold st_weight. induction T.
-    - reflexivity.
-    - assert (H' : A_union (E_set n f) a <> A_empty). {
-        apply U_set_diff. exists (n -- f). split; [repeat constructor | intros H; inversion H].
-        }
-        contradiction.
-    - subst. apply IHT. reflexivity.
-Qed.
-
-Lemma tree_subset_weight_bound : 
-	forall {V V' E E'} (T : Tree V E) (T': Tree V' E') w,
-	A_included E E' -> st_weight T w <= st_weight T' w.
-Proof. intros V V' E E' T. generalize dependent E'. generalize dependent V'. induction T'; intros.
-	+ simpl. apply subset_empty_is_empty with (A := E) in H. subst. apply tree_empty_edge_zero_weight.
-
-(* T_leaf *)
-	+ simpl. specialize IHT' with (w := w). 
-	(* We know A_included E (A_union (E_set n f) a) *)
-	assert (H_E_in_union_a : A_included E a). admit. apply IHT' in H_E_in_union_a. lia.
-	+ simpl. specialize IHT' with (w := w); subst. apply IHT' in H. lia.
-Admitted.
-
-
 Theorem prim_ends :
 	forall {V E} (G: Graph V E) (C: Connected V E) {E'} (T : Tree V E') w,
 	is_subset_MST w T G -> is_MST w T G.
-Proof. intros. unfold is_subset_MST in H. 
+Proof. intros V E G C E' T w H. unfold is_subset_MST in H. 
 
 (* Show T is a subtree of G *)
 destruct H as [E_MST [MST [H_MST_is_MST [E'_incl V_incl]]]]. inversion H_MST_is_MST. unfold is_MST. split.
