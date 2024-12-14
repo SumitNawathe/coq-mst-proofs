@@ -388,19 +388,115 @@ Qed.
 
 
 
+
+Lemma same_path_same_edges :
+	forall V E x y vl el1 el2, Path V E x y vl el1 -> Path V E x y vl el2 -> el1 = el2.
+Proof.
+	intros V E x y vl. generalize dependent y. generalize dependent x.
+	induction vl as [|h t]; intros x y el1 el2 p1 p2.
+	- inversion p1. inversion p2. reflexivity.
+	- inversion p1. inversion p2. subst. f_equal.
+		apply (IHt _ _ _ _ H1 H13).
+Qed.
+
 Lemma V_extract_edges :
-	forall V E x y z vl_yz el_yz vl_xz e,
+	forall {V E x y z vl_yz el_yz vl_xz e},
 	Path V E y z vl_yz el_yz ->
 	Path V E x z (V_extract x (y :: vl_yz)) vl_xz ->
-	In e vl_xz -> e = (E_ends x y) \/ In e el_yz.
+	In e vl_xz -> (exists q, In q vl_yz /\ e = (E_ends x q)) \/ In e el_yz.
 Proof.
 	intros V E x y z vl_yz el_yz vl_xz. generalize dependent el_yz. generalize dependent vl_yz.
 	generalize dependent z. generalize dependent y. generalize dependent x.
 	induction vl_xz as [|h t]; intros x y z vl_yz el_yz e path_yz path_xz He.
 	- inversion He.
-	- case (V_in_dec x vl_yz); intros H_x_vl_yz.
-Admitted.
+	- destruct He as [H_eh | H_et].
+		+ (* case: e = h (the first edge in list) => will be x--q for some q *)
+			subst e.
+			(* to get the x: induction on vl_yz *)
+			generalize dependent path_xz. generalize dependent path_yz.
+			generalize dependent el_yz. generalize dependent z. generalize dependent y. generalize dependent x.
+			induction vl_yz as [|hx tx]; intros.
+			* simpl in path_xz. generalize dependent path_xz.
+				case (V_in_dec x nil); intros H_x path_xz; try solve [inversion H_x].
+				inversion path_xz.
+			* unfold V_extract in path_xz. generalize dependent path_xz.
+				case (V_in_dec x (hx::tx)); fold V_extract; intros H_x_vl_yz path_xz.
+				-- 	inversion path_yz; subst.
+						assert (path_xz' : Path V E x z (V_extract x (hx::tx)) (h::t)) by (unfold V_extract; fold V_extract; assumption).
+						destruct (IHtx _ _ _ _ H1 path_xz') as [Hq | H''].
+					++ 	destruct Hq as [q [Hq1 Hq2]]. left. exists q. split.
+						** 	right. assumption.
+						** 	assumption.
+					++ 	right. right. assumption.
+				-- 	inversion path_xz; subst.
+						left. exists hx. split.
+					++ 	left. reflexivity.
+					++ 	reflexivity.
+		+ (* case: e in t (later in the list) *)
+			(* need to remove h => induction on vl_yz again *)
+			generalize dependent path_xz. generalize dependent path_yz.
+			generalize dependent el_yz. generalize dependent z. generalize dependent y. generalize dependent x.
+			induction vl_yz as [|hx tx]; intros.
+			* simpl in path_xz. generalize dependent path_xz.
+				case (V_in_dec x nil); intros H_x path_xz; try solve [inversion H_x].
+				inversion path_xz.
+			* unfold V_extract in path_xz. generalize dependent path_xz.
+				case (V_in_dec x (hx::tx)); fold V_extract; intros H_x_vl_yz path_xz.
+				-- 	inversion path_yz; subst.
+						assert (path_xz' : Path V E x z (V_extract x (hx::tx)) (h::t)) by (unfold V_extract; fold V_extract; assumption).
+						destruct (IHtx _ _ _ _ H1 path_xz') as [Hq | H''].
+					++ 	destruct Hq as [q [Hq1 Hq2]]. left. exists q. split.
+						** 	right. assumption.
+						** 	assumption.
+					++ 	right. right. assumption.
+				-- 	destruct el_yz as [|elh elt] eqn:E_el; try solve [inversion path_yz].
+						inversion path_yz. inversion path_xz. subst.
+						right. right.
+						(* the have the same endpoints and vertex list -> have the same edge list*)
+						assert (H_t_elt : t = elt) by (apply (same_path_same_edges _ _ _ _ _ _ _ H16 H3)).
+						subst. assumption.
+Qed.
 
+Lemma V_extract_first :
+	forall {V E x z hv tv he te},
+	Path V E x z (V_extract x (hv::tv)) (he::te) ->
+	exists y, In y tv /\ he = E_ends x y.
+Proof.
+	intros V E x z hv tv. generalize dependent hv. generalize dependent z. generalize dependent x.
+	induction tv as [|h t]; intros.
+	- inversion H; subst.
+		generalize dependent H0.
+		case (V_in_dec x nil); intros H_xnil H0; solve [contradiction | discriminate].
+	- generalize dependent H. unfold V_extract.
+		case (V_in_dec x (h::t)); intros H_x_ht H_path. fold V_extract in H_path.
+		+ assert (H_path' : Path V E x z (V_extract x (hv::t)) (he::te)). {
+				unfold V_extract; fold V_extract. assumption.
+			}
+			destruct (IHt _ _ _ _ _ H_path') as [y [Hy1 Hy2]].
+			exists y. split.
+			* right. assumption.
+			* assumption.
+		+ inversion H_path; subst.
+			exists h. split.
+			* left. reflexivity.
+			* reflexivity.
+Qed.
+
+
+Lemma V_extract_edges' :
+	forall {V E x y z vl_yz el_yz vl_xz e},
+	Path V E y z vl_yz el_yz ->
+	Path V E x z (V_extract x (y :: vl_yz)) vl_xz ->
+	In e vl_xz -> In e el_yz.
+Proof. Admitted.
+(*
+Similar to V_extract_edges, but you need to show that in the former case,
+if you have an edge x -- q with q in vl_yz, then (x -- q) was originally in el_yz
+basically need show that when extracting, either
+1. x does not appear in the original list, in which case ok, the first edge is good
+2. x does appear in the list -> the last vertex in the list before it becomes valid is x,
+	 so the x--q edge is in the original list before extraction
+*)
 
 
 
@@ -423,8 +519,7 @@ Proof.
         exists (V_extract x0 (y0 :: vl')).
 				exists x1. auto.
 				intros e He.
-				destruct (V_extract_edges _ _ _ _ _ _ _ _ e H p He) as [He' | He'].
-				left. subst. reflexivity.
+				specialize (V_extract_edges' H p He) as He'.
 				right. apply q. assumption.
 				unfold V_extract in p.
         intros u Hu.

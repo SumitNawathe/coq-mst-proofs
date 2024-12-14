@@ -165,39 +165,16 @@ Proof.
 		(* ... why is this a contradiction? its not? *)
 Admitted.
 
-(* Lemma split_tree_weight_lemma :
-	forall {V1 E1 V2 E2 x y}
-	(T: Tree (V1 ∪ V2) (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
-	x ∈ V1 -> y ∈ V2 -> st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
-Proof.
-	intros V1 E1 V2 E2 x y T T1 T2 w H_V1x H_V2y.
-	remember (V1 ∪ V2) as V. remember (E_set x y ∪ (E1 ∪ E2)) as E.
-	generalize dependent T2. generalize dependent E2. generalize dependent V2.
-	generalize dependent T1. generalize dependent E1. generalize dependent V1.
-	induction T; intros.
-	- assert (HeqE' : A_empty <> E_set x y ∪ (E1 ∪ E2)). {
-			apply U_set_diff_commut. apply U_set_diff.
-			exists (x -- y). split; [repeat constructor | intros H; inversion H].
-		}
-		contradiction.
-	- simpl. *)
 
-(* Lemma split_tree_weight_lemma :
-	forall {V V1 E1 V2 E2 x y}
-	(T: Tree V (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
+Lemma split_tree_weight_lemma' :
+	forall {V E V1 E1 V2 E2 x y}
+	(T: Tree V E) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
+	V = (V1 ∪ V2) -> E = (E_set x y ∪ (E1 ∪ E2)) ->
+	x ∈ V1 -> y ∈ V2 -> V1 ∩ V2 = ∅ ->
 	st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
 Proof.
-	intros V V1 E1 V2 E2 x y T T1 T2.
-	remember (E_set x y ∪ (E1 ∪ E2)) as E.
-	generalize dependent T2. generalize dependent E2. generalize dependent V2.
-	generalize dependent T1. generalize dependent E1. generalize dependent V1.
-	induction T; intros.
-	- assert (HeqE' : A_empty <> E_set x y ∪ (E1 ∪ E2)). {
-			apply U_set_diff_commut. apply U_set_diff.
-			exists (x -- y). split; [repeat constructor | intros H; inversion H].
-		}
-		contradiction.
-	- simpl. *)
+	intros. subst. apply (split_tree_weight_lemma T T1 T2 w H1 H2 H3).
+Qed.
 
 
 Lemma lift_walk :
@@ -210,8 +187,6 @@ Proof.
 		+ apply H. assumption.
 		+ apply H0. assumption.
 Qed.
-
-
 
 
 Theorem light_edge_is_safe :
@@ -402,9 +377,10 @@ Proof.
 			+ inversion H; symmetry in H0; contradiction.
 			+ rewrite H_VE1E2 in H. inversion H. assumption.
 	}
-	subst E_MST.
-	specialize (split_tree_weight_lemma MST T1 T2 w) as H_w1.
-	specialize (split_tree_weight_lemma T_new T1 T2 w) as H_w2.
+	symmetry in H_V1V2_cup.
+	specialize (split_tree_weight_lemma' MST T1 T2 w H_V1V2_cup H_MSTw_better H_V1_u H_V2_v H_V1V2_cap) as H_w1.
+	remember (E_set x y ∪ (E1 ∪ E2)) as E_new eqn:H_Enew.
+	specialize (split_tree_weight_lemma' T_new T1 T2 w H_V1V2_cup H_Enew H_V1_x H_V2_y H_V1V2_cap) as H_w2.
 	assert (H_T_new_smaller : st_weight T_new w < st_weight MST w). {
 		rewrite H_w1. rewrite H_w2.
 		specialize (H_xy_light u v H_uv_crossing') as H_w_ineq.
@@ -414,7 +390,7 @@ Proof.
 	assert (H_Tnew_subtree : is_subtree T_new G). {
 		unfold is_subtree. split; try solve [apply self_inclusion].
 		destruct H_MST_subtree as [_ H_MST_Eincl]. unfold A_included in *.
-		intros a Ha. inversion Ha.
+		intros a Ha. subst. inversion Ha.
 		- subst. inversion H; subst.
 			+ assumption.
 			+ apply (G_non_directed _ _ G). assumption.
