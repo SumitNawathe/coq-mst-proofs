@@ -162,6 +162,7 @@ Proof.
 
 		(* case (E_set n f) <> (E_set x y) *)
 		(* case (n -- f) in E1 -> n and f in V1 *)
+		(* ... why is this a contradiction? its not? *)
 Admitted.
 
 (* Lemma split_tree_weight_lemma :
@@ -275,12 +276,26 @@ Proof.
 	destruct (split_tree MST u v H_EMST_uv') as
 			[V1 [V2 [E1 [E2 [T1 [T2 [H_V1V2_cap [H_V1V2_cup [H_VE1E2 [H_V1_u H_V2_v]]]]]]]]]].
 	unfold A_union in *; unfold A_included in *.
+	(* some useful lemmas about the split *)
+	assert (H_notV1_V2 : forall n, V n -> ~ V1 n -> V2 n). {
+		intros n H_Vn H_not_V1n.
+		apply pbc; intros H_not_V2n.
+		assert (H_contra : V1 ∪ V2 <> V). {
+			apply U_set_diff_commut. apply U_set_diff. exists n. split; try solve [assumption].
+			intros H. inversion H; contradiction.
+		}
+		contradiction.
+	}
 	(* must show that x and y lie on either side of the split *)
 	assert (H_V1_x : x ∈ V1). {
 		case (V_eq_dec x u); intros H_xu.
 		{ subst; assumption. }
 		apply pbc; intros H_nV1_x.
-		assert (H_V2_x : x ∈ V2) by admit.
+		assert (H_V2_x : x ∈ V2). {
+			apply H_notV1_V2.
+			- apply H_V'_sub_V. assumption.
+			- assumption.
+		}
 		(* walk from v --> x *)
 		specialize (Tree_isa_connected _ _ T2) as C2.
 		destruct (Connected_walk _ _ C2 x v H_V2_x H_V2_v) as [wvl_xv [wel_xv walk_xv]].
@@ -316,7 +331,7 @@ Proof.
 		(* join to get walk from v --> x --> u *)
 		specialize (Walk_append _ _ u x v _ _ _ _ walk_ux'' walk_xv'') as walk_uv.
 		(* make it a path from v --> u, using the improved version *)
-		destruct (Walk_to_path' _ _ _ _ _ _ walk_uv) as [pvl [pel path_uv] p_vl_cond].
+		destruct (Walk_to_path'' _ _ _ _ _ _ walk_uv) as [pvl [pel path_uv path_el_cond] p_vl_cond].
 		(* extend using v -- u to make a cycle *)
 		assert (H_EMST_vu : E_MST (v -- u)) by (apply (G_non_directed _ _ G_MST); assumption).
 		assert (H_Vv : V v) by apply (G_ina_inv1 _ _ G_MST _ _ H_EMST_vu).
@@ -335,7 +350,30 @@ Proof.
 				contradiction.
 		}
 		assert (H_vrefl : In v pvl -> v = v) by (intros; reflexivity).
-		assert (H_no_vu_in_pel : forall u0, In u0 pel -> ~ E_eq u0 (v ~~ u)) by admit.
+		assert (H_no_vu_in_pel : forall u0, In u0 pel -> ~ E_eq u0 (v ~~ u)). {
+			intros e He_pel He_vu. apply path_el_cond in He_pel.
+			destruct (in_app_or _ _ _ He_pel) as [He1 | He2].
+			- specialize (Tree_isa_graph _ _ T) as G'.
+				inversion He_vu; subst; specialize (P_inel_ina _ _ _ _ _ _ path_ux _ _ He1) as H'.
+				+ specialize (G_ina_inv1 _ _ G' _ _ H') as H_V'v. contradiction.
+				+ specialize (G_ina_inv2 _ _ G' _ _ H') as H_V'v. contradiction.
+			- specialize (Tree_isa_graph _ _ T2) as G2.
+				inversion He_vu; subst; specialize (P_inel_ina _ _ _ _ _ _ path_xv _ _ He2) as H'.
+				+ specialize (G_ina_inv2 _ _ G2 _ _ H') as H_V2v.
+					assert (H_contra : V1 ∩ V2 <> ∅). {
+						apply U_set_diff. exists u. split.
+						- split; assumption.
+						- intros H. inversion H.
+					}
+					contradiction.
+				+ specialize (G_ina_inv1 _ _ G2 _ _ H') as H_V2v.
+					assert (H_contra : V1 ∩ V2 <> ∅). {
+						apply U_set_diff. exists u. split.
+						- split; assumption.
+						- intros H. inversion H.
+					}
+					contradiction.
+		}
 		(* TODO: need similar extension as for vl to solve ^ *)
 		specialize (P_step V E_MST v u v pvl pel path_uv H_Vv
 			H_EMST_vu H_vnu H_u_not_in_pvl H_vrefl H_no_vu_in_pel) as p_cyc.
