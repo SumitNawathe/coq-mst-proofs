@@ -277,11 +277,17 @@ Proof.
 	unfold A_union in *; unfold A_included in *.
 	(* must show that x and y lie on either side of the split *)
 	assert (H_V1_x : x ∈ V1). {
+		case (V_eq_dec x u); intros H_xu.
+		{ subst; assumption. }
 		apply pbc; intros H_nV1_x.
 		assert (H_V2_x : x ∈ V2) by admit.
 		(* walk from v --> x *)
 		specialize (Tree_isa_connected _ _ T2) as C2.
 		destruct (Connected_walk _ _ C2 x v H_V2_x H_V2_v) as [wvl_xv [wel_xv walk_xv]].
+		(* squeeze to path, then relax back to walk *)
+		specialize (Walk_to_path _ _ _ _ _ _ walk_xv) as [pvl_xv [pel_xv path_xv]].
+		specialize (Path_isa_trail _ _ _ _ _ _ path_xv) as trail_xv.
+		specialize (Trail_isa_walk _ _ _ _ _ _ trail_xv) as walk_xv'. clear trail_xv.
 		(* lift walk_xv to MST *)
 		assert (H_V1V2_sub_V : V1 ∪ V2 ⊆ V). {
 			subst. apply self_inclusion.
@@ -297,23 +303,40 @@ Proof.
 			assert (H_a_E1E2 : (E1 ∪ E2) a) by (right; assumption).
 			apply H' in H_a_E1E2. inversion H_a_E1E2. assumption.
 		}
-		specialize (lift_walk H_V2_V H_E2_sub_EMST walk_xv) as walk_xv'.
+		specialize (lift_walk H_V2_V H_E2_sub_EMST walk_xv') as walk_xv''.
 		(* walk from x --> u *)
 		specialize (Tree_isa_connected _ _ T) as CV'.
 		destruct (Connected_walk _ _ CV' u x H_V'u H_V'x) as [wvl_ux [wel_ux walk_ux]].
+		(* squeeze to path, then relax back to walk *)
+		specialize (Walk_to_path _ _ _ _ _ _ walk_ux) as [pvl_ux [pel_ux path_ux]].
+		specialize (Path_isa_trail _ _ _ _ _ _ path_ux) as trail_ux.
+		specialize (Trail_isa_walk _ _ _ _ _ _ trail_ux) as walk_ux'. clear trail_ux.
 		(* lift walk_ux to MST *)
-		specialize (lift_walk H_V'_sub_V H_ET_EMST walk_ux) as walk_ux'.
+		specialize (lift_walk H_V'_sub_V H_ET_EMST walk_ux') as walk_ux''.
 		(* join to get walk from v --> x --> u *)
-		specialize (Walk_append _ _ u x v _ _ _ _ walk_ux' walk_xv') as walk_uv.
+		specialize (Walk_append _ _ u x v _ _ _ _ walk_ux'' walk_xv'') as walk_uv.
 		(* make it a path from v --> u, using the improved version *)
 		destruct (Walk_to_path' _ _ _ _ _ _ walk_uv) as [pvl [pel path_uv] p_vl_cond].
 		(* extend using v -- u to make a cycle *)
 		assert (H_EMST_vu : E_MST (v -- u)) by (apply (G_non_directed _ _ G_MST); assumption).
 		assert (H_Vv : V v) by apply (G_ina_inv1 _ _ G_MST _ _ H_EMST_vu).
 		assert (H_vnu : v <> u) by (intros H_vu; subst; contradiction).
-		assert (H_u_not_in_pvl : ~ In u pvl) by admit.
+		assert (H_u_not_in_pvl : ~ In u pvl). {
+			intros H_u_pvl. apply p_vl_cond in H_u_pvl.
+			destruct (in_app_or _ _ _ H_u_pvl) as [H_u_wvl_ux | H_u_wvl_xv].
+			- assert (H_xu' : u = x) by apply (P_when_cycle _ _ _ _ _ _ path_ux H_u_wvl_ux).
+				symmetry in H_xu'. contradiction.
+			- assert (H_V2u : u ∈ V2) by apply (P_invl_inv _ _ _ _ _ _ path_xv _ H_u_wvl_xv).
+				assert (H_V1V2_cap' : V1 ∩ V2 <> ∅). {
+					apply U_set_diff. exists u. split.
+					- split; assumption.
+					- intros H. inversion H.
+				}
+				contradiction.
+		}
 		assert (H_vrefl : In v pvl -> v = v) by (intros; reflexivity).
 		assert (H_no_vu_in_pel : forall u0, In u0 pel -> ~ E_eq u0 (v ~~ u)) by admit.
+		(* TODO: need similar extension as for vl to solve ^ *)
 		specialize (P_step V E_MST v u v pvl pel path_uv H_Vv
 			H_EMST_vu H_vnu H_u_not_in_pvl H_vrefl H_no_vu_in_pel) as p_cyc.
 		(* cycle in tree -> contradiction *)
@@ -322,7 +345,7 @@ Proof.
 		specialize (Acyclic_no_cycle _ _ A_MST _ _ _ _ p_cyc cyc); intros Hvl.
 		discriminate.
 	}
-	assert (H_V2_y : y ∈ V2) by admit.
+	assert (H_V2_y : y ∈ V2) by admit. (* Mostly the same as the H_V1_x by symmetry *)
 	(* use x -- y to join the trees *)
 	specialize (join_trees T1 T2 x y H_V1V2_cap H_V1_x H_V2_y) as T_new.
 	unfold V_union in *; unfold A_union in *.
