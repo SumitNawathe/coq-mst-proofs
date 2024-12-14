@@ -87,6 +87,25 @@ Definition is_subset_MST {V V_T: V_set} {E E_T: A_set} (w : A_set -> nat)
 	{E_MST : A_set & {MST : Tree V E_MST & 
 	is_MST w MST G /\ A_included E_T E_MST /\ V_included V_T V}}.
 
+Lemma subset_MST_weight_bound : 
+	forall {V E E'} (T : Tree V E) (T': Tree V E') w,
+	A_included E E' -> st_weight T w <= st_weight T' w.
+Proof. Admitted.
+
+Lemma split_tree_weight_lemma :
+	forall {V V1 E1 V2 E2 x y}
+	(T: Tree V (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
+	st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
+Proof. Admitted.
+
+Lemma union_included1 :
+	forall {T} {A B C : U_set T}, A ∪ B ⊆ C -> A ⊆ C.
+Proof. intros. intros a Ha. apply H. left. assumption. Qed.
+
+Lemma union_included2 :
+	forall {T} {A B C : U_set T}, A ∪ B ⊆ C -> B ⊆ C.
+Proof. intros. intros a Ha. apply H. right. assumption. Qed.
+
 Theorem light_edge_is_safe :
 	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
 	V' <> V -> is_subset_MST w T G -> light_edge G V' x y w ->
@@ -147,7 +166,50 @@ Proof.
 		- apply (G_non_directed _ _ G_MST). assumption.
 	}
 	destruct (split_tree MST u v H_EMST_uv') as
-			[V1 [V2 [E1 [E2 [T1 [T2 [H_V1V2 [H_E1E2 [H_V1u H_V2v]]]]]]]]].
+			[V1 [V2 [E1 [E2 [T1 [T2 [H_V1V2_cap [H_V1V2_cup [H_VE1E2 [H_V1_u H_V2_v]]]]]]]]]].
+	unfold A_union in *; unfold A_included in *.
+	(* must show that x and y lie on either side of the split *)
+	assert (H_V1_x : x ∈ V1) by admit.
+	assert (H_V2_y : y ∈ V2) by admit.
+	(* use x -- y to join the trees *)
+	specialize (join_trees T1 T2 x y H_V1V2_cap H_V1_x H_V2_y) as T_new.
+	unfold V_union in *; unfold A_union in *.
+	rewrite H_V1V2_cup in T_new.
+	(* show that T_new has smaller weight *)
+	assert (H_MSTw_better : E_MST = E_set u v ∪ (E1 ∪ E2)) by admit.
+	subst E_MST.
+	specialize (split_tree_weight_lemma MST T1 T2 w) as H_w1.
+	specialize (split_tree_weight_lemma T_new T1 T2 w) as H_w2.
+	assert (H_T_new_smaller : st_weight T_new w < st_weight MST w). {
+		rewrite H_w1. rewrite H_w2.
+		specialize (H_xy_light u v H_uv_crossing') as H_w_ineq.
+		lia.
+	}
+	(* show that T_new is subtree of G *)
+	assert (H_Tnew_subtree : is_subtree T_new G). {
+		unfold is_subtree. split; try solve [apply self_inclusion].
+		destruct H_MST_subtree as [_ H_MST_Eincl]. unfold A_included in *.
+		intros a Ha. inversion Ha.
+		- subst. inversion H; subst.
+			+ assumption.
+			+ apply (G_non_directed _ _ G). assumption.
+		- subst. apply (union_included2 H_MST_Eincl). assumption.
+	}
+	(* derive contradiction *)
+	specialize (H_MST_weight_cond _ T_new H_Tnew_subtree) as H_Tnew_bigger.
+	lia.
+Admitted.
+
+
+
+
+Lemma split_tree_weight_lemma :
+	forall V V1 E1 V2 E2 x y
+	(T: Tree V (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
+	st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
+Proof. Admitted.
+
+
 
 
 
