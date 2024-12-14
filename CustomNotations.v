@@ -7,7 +7,7 @@ Open Scope uset_scope.
 Delimit Scope uset_scope with U_set.
 Bind Scope uset_scope with U_set.
 
-Notation "A '⊂' B" := (Included _ A B)
+Notation "A '⊆' B" := (Included _ A B)
 	(at level 75) : uset_scope.
 Notation "A '⊄' B" := (~ (Included _ A B))
 	(at level 75) : uset_scope.

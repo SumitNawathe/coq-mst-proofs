@@ -14,23 +14,23 @@ Open Scope uset_scope.
 
 (* Useful theorems on sets *)
 
-Lemma subset_empty_is_empty : forall {T} (A: U_set T), A ⊂ ∅ -> A = ∅.
+Lemma subset_empty_is_empty : forall {T} (A: U_set T), A ⊆ ∅ -> A = ∅.
 Proof.
 	intros T A H_AT. apply U_set_eq. intros x; split; intros H; [auto | inversion H].
 Qed.
 
-Lemma self_inclusion : forall T (A : U_set T), A ⊂ A.
+Lemma self_inclusion : forall T (A : U_set T), A ⊆ A.
 Proof. intros. unfold Included. auto. Qed.
 
 Lemma set_minus_point_still_included :
-	forall T (A : U_set T) (x : T), (A\⟨x⟩) ⊂ A.
+	forall T (A : U_set T) (x : T), (A\⟨x⟩) ⊆ A.
 Proof.
 	intros. unfold Included. intros y H_differ.
 	inversion H_differ; subst; clear H_differ. assumption.
 Qed.
 
 Lemma included_trans :
-	forall T (A B C: U_set T), A ⊂ B -> B ⊂ C -> A ⊂ C.
+	forall T (A B C: U_set T), A ⊆ B -> B ⊆ C -> A ⊆ C.
 Proof. intros T A B C H_AB H_BC. unfold Included. intros. auto. Qed.
 
 Lemma not_Single_not_equal :
@@ -47,7 +47,7 @@ Qed.
 Axiom decideable : forall P, {P} + {~P}.
 
 Lemma vertex_subset_decideable :
-	forall V E (G: Graph V E) A, A ⊂ V -> forall x, {x ∈ A} + {x ∉ A}.
+	forall V E (G: Graph V E) A, A ⊆ V -> forall x, {x ∈ A} + {x ∉ A}.
 Proof.
 	intros. destruct (decideable (x ∈ A)); auto.
 Qed.
@@ -74,10 +74,10 @@ Qed.
 (* Subgraph/subtree definitions *)
 
 Definition is_subgraph {V V' : V_set} {E E' : A_set} (G' : Graph V' E') (G : Graph V E) : Prop := 
-    V' ⊂ V /\ E' ⊂ E.
+    V' ⊆ V /\ E' ⊆ E.
 
 Definition is_subtree {V V' : V_set} {E E' : A_set} (T : Tree V' E') (G : Graph V E) : Prop := 
-    V' ⊂ V /\ E' ⊂ E.
+    V' ⊆ V /\ E' ⊆ E.
 
 Lemma is_subtree_implies_is_subgraph :
 	forall V V' E E' (T : Tree V' E') (G' : Graph V' E') (G : Graph V E),
@@ -130,11 +130,11 @@ Definition trivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop
 	A = V \/ A = ∅.
 
 Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
-	A ⊂ V /\ ~ trivial_cut G A.
+	A ⊆ V /\ ~ trivial_cut G A.
 
 Lemma nontrivial_cut_points :
 	forall V E (G: Graph V E) A,
-	nontrivial_cut G A <-> A ⊂ V /\ (exists x, x ∈ A) /\ (exists y, y ∈ V /\ y ∉ A).
+	nontrivial_cut G A <-> A ⊆ V /\ (exists x, x ∈ A) /\ (exists y, y ∈ V /\ y ∉ A).
 Proof.
 	intros. split; intros H.
 	- inversion H as [H_AV H_A_nontriv].
