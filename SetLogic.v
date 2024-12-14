@@ -13,6 +13,7 @@ Thus, the following relations on finite sets should be decideable
 
 Axiom set_eq_dec : forall {T} (A B : U_set T), {A = B} + {A <> B}.
 Axiom set_subset_dec : forall {T} (A B : U_set T), {A ⊆ B} + {A ⊄ B}.
+Axiom set_in_dec : forall {T} (x : T) (A : U_set T), {x ∈ A} + {x ∉ A}.
 
 (* Utlities *)
 

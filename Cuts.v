@@ -144,7 +144,7 @@ Definition edge_crossing_cut {V : V_set} {E : A_set} (G : Graph V E) (A : V_set)
 Lemma connected_graph_has_edge_crossing_cut :
 	forall V E (G: Graph V E), Connected V E ->
 	forall A, nontrivial_cut G A ->
-	exists u v, edge_crossing_cut G A u v.
+	{u & {v & edge_crossing_cut G A u v}}.
 Proof.
 	intros V E G H_connected A H_A_cut.
 	(* Since A nontrivial, get vertex x in A and y not in A *)
@@ -160,7 +160,7 @@ Proof.
 	   contradiction.
 	- (* case analysis: does edge x--h cross the cut *)
 	  (* case (Vset_dec A h); intros H_Ah. *)
-	  	case (decideability (h ∈ A)); intros H_Ah.
+	  	case (set_in_dec h A); intros H_Ah.
 	  + apply H_VA in H_Ah as H_Vh.
 	  	apply (IHt h H_Ah H_Vh y H_Vy H_not_Ay el0 H1).
 		+ exists x. exists h.
@@ -171,51 +171,78 @@ Qed.
 Lemma find_crossing_edge_on_walk :
     forall {V E} (G: Graph V E) A x z vl el,
     nontrivial_cut G A -> x ∈ A -> z ∉ A -> Walk V E x z vl el ->
-    exists u v, edge_crossing_cut G A u v /\
-		exists vl1 el1 vl2 el2 (walk1 : Walk V E x u vl1 el1) (walk2 : Walk V E v z vl2 el2), True.
+		{u & {v & edge_crossing_cut G A u v &
+		{vl1 & {el1 & {vl2 & {el2 & Walk V E x u vl1 el1 & Walk V E v z vl2 el2}}}}}}.
 Proof.
 	intros V E G A x z vl. generalize dependent z. generalize dependent x.
 	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_walk;
 	inversion H_walk; subst; try solve [contradiction].
-	case (decideability (h ∈ A)); [intros H_Ah | intros H_nAh].
+	case (set_in_dec h A); [intros H_Ah | intros H_nAh].
 	- (* h ∈ A -> cross in later part of walk *)
 		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
-		inversion H as [u [v [H_cross [vl1 [el1 [vl2 [el2 [H_walk1 H_walk2]]]]]]]].
-		exists u. exists v. split; try solve [assumption].
-		exists (h::vl1). exists ((x ~~ h)::el1). exists vl2. exists el2.
-		split; try solve [simpl; apply f_equal; assumption].
-		+ constructor 2; try solve [assumption].
-		+ assumption.
+		inversion H as [u [v H_cross [vl1 [el1 [vl2 [el2 H_walk1 H_walk2]]]]]].
+		exists u. exists v; try solve [assumption].
+		exists (h::vl1). exists ((x ~~ h)::el1).
+		exists vl2. exists el2; try solve [simpl; f_equal; assumption].
+		constructor 2; solve [assumption].
 	- (* h ∉ A -> x -- h is the cross *)
-		exists x. exists h. split.
+		exists x. exists h.
 		+ constructor.
 			* assumption.
 			* split; assumption.
-		+ exists nil. exists nil. exists t. exists el0. split.
+		+ exists nil. exists nil. exists t. exists el0.
 			* constructor. assumption.
-			* exists H1. trivial.
+			* assumption.
 Qed.
 
 
 
-Lemma tree_has_edge_crossing_cut :
-	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
+(* Edges crossing cut with a tree *)
+
+Lemma lift_walk :
+	forall {V E x y vl el V' E'}, V ⊆ V' -> E ⊆ E' -> Walk V E x y vl el -> Walk V' E' x y vl el.
+Proof.
+	intros. induction H1.
+	- constructor. apply H. assumption.
+	- constructor.
+		+ assumption.
+		+ apply H. assumption.
+		+ apply H0. assumption.
+Qed.
+
+Theorem tree_has_edge_crossing_cut :
+	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, E ⊆ GE -> nontrivial_cut G A ->
 	{x: Vertex & {y: Vertex & (x -- y) ∈ E /\ edge_crossing_cut G A x y}}.
 Proof.
-	intros.
+	intros V GE E G T A H_E_GE H_A_nontriv.
 	specialize (Tree_isa_connected _ _ T) as Tcon.
-	(* apply (nontrivial_cut_points) in H.
-	destruct H as [H_AV [H_Ax H_Ay]]. *)
+	(* nontrivial cut => get points inside and outside *)
+	specialize (nontrivial_cut_point_inside _ _ G A H_A_nontriv) as [x H_Ax].
+	specialize (nontrivial_cut_point_outside _ _ G A H_A_nontriv) as [y H_Vy H_not_Ay].
+	(* connected => walk between points => crossing edge *)
+	assert (H_A_nontriv' : nontrivial_cut G A) by assumption.
+	destruct H_A_nontriv as [H_AV H_A_nontriv].
+	assert (H_Vx : x ∈ V) by (apply H_AV; assumption).
+	specialize (Connected_walk _ _ Tcon x y H_Vx H_Vy) as [vl [el H_walk]].
+	assert (H_V_subset_V : V ⊆ V) by (apply self_inclusion).
+	specialize (lift_walk H_V_subset_V H_E_GE H_walk) as H_walk'.
+	specialize (find_crossing_edge_on_walk G A x y vl el H_A_nontriv' H_Ax H_not_Ay H_walk') as H.
+	destruct (find_crossing_edge_on_walk G A x y vl el H_A_nontriv' H_Ax H_not_Ay H_walk') as
+		[u [v edge_crossing_uv _]].
+	exists u. exists v.
+	split; try assumption.
+	unfold edge_crossing_cut in edge_crossing_uv.
+	destruct (edge_crossing_uv H_A_nontriv').
 Admitted.
 
 
 
 
-
-
-
-Lemma tree_edge_crossing_cut_unique :
+Theorem tree_edge_crossing_cut_unique :
 	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
 	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
 	x = u /\ y = v.
 Proof. Admitted.
+
+
+
