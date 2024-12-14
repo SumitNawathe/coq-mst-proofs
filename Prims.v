@@ -30,7 +30,7 @@ Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : 
 	end.
  
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
-	is_subtree T G /\ forall E_T' (T': Tree V E_T'), is_subtree T' G -> st_weight T f <= st_weight T' f.
+	is_spanning_tree T G /\ forall E_T' (T': Tree V E_T'), is_spanning_tree T' G -> st_weight T f <= st_weight T' f.
 
 (*
 Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
@@ -404,9 +404,10 @@ Proof.
 		lia.
 	}
 	(* show that T_new is subtree of G *)
-	assert (H_Tnew_subtree : is_subtree T_new G). {
+	assert (H_Tnew_subtree : is_spanning_tree T_new G). {
+		unfold is_spanning_tree. split; try solve [reflexivity].
 		unfold is_subtree. split; try solve [apply self_inclusion].
-		destruct H_MST_subtree as [_ H_MST_Eincl]. unfold A_included in *.
+		destruct H_MST_subtree as [_ [_ H_MST_Eincl]]. unfold A_included in *.
 		intros a Ha. subst. inversion Ha.
 		- subst. inversion H; subst.
 			+ assumption.
