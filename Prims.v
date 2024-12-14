@@ -30,11 +30,11 @@ Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : 
 	end.
 
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
-	is_subtree T G -> forall E_T' (T': Tree V E_T'), is_subtree T' G -> st_weight T f <= st_weight T' f.
+	is_subtree T G /\ forall E_T' (T': Tree V E_T'), is_subtree T' G -> st_weight T f <= st_weight T' f.
 
 (*
 Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
-	A ⊂ V /\ ~ trivial_cut G A.
+	A ⊆ V /\ ~ trivial_cut G A.
 *)
 
 (* 
@@ -63,32 +63,95 @@ Proof. Admitted.
 Lemma split_tree :
 	forall {V E} (T: Tree V E) x y, A_included (E_set x y) E ->
 	exists V1 V2 E1 E2 (T1 : Tree V1 E1) (T2 : Tree V2 E2),
-	V_union V1 V2 = V /\ A_union E1 E2 = (E \ (E_set x y)) /\ V1 x /\ V2 y.
+	V1 ∩ V2 = ∅ /\ V1 ∪ V2 = V /\ A_union E1 E2 = (E \ (E_set x y)) /\ V1 x /\ V2 y.
 Proof. Admitted.
 
 Lemma tree_has_edge_crossing_cut :
-	forall {V E} (G : Graph V E) (T: Tree V E) (f: A_set -> nat) A,
-	nontrivial_cut G A -> exists x y, edge_crossing_cut G A x y.
+	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
+	{x: Vertex & {y: Vertex & (x -- y) ∈ E /\ edge_crossing_cut G A x y}}.
 Proof. Admitted.
 
 Lemma tree_edge_crossing_cut_unique :
-	forall {V E} (G : Graph V E) (T: Tree V E) (f: A_set -> nat) A, nontrivial_cut G A ->
+	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
 	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
-	(x ~~ y) = (u ~~ v).
+	x = u /\ y = v.
 Proof. Admitted.
 
 (* Assume edge weights are unique *)
 Definition light_edge {V E} (G: Graph V E) A x y (w : A_set -> nat) :=
-	edge_crossing_cut G A x y /\ (forall u v, edge_crossing_cut G A u v -> w (E_set x y) < w (E_set u v)).
+	edge_crossing_cut G A x y /\
+	(forall u v, edge_crossing_cut G A u v -> w (E_set x y) < w (E_set u v)).
 
-Definition is_subset_MST {V V_T: V_set} {E E_T: A_set} (w : A_set -> nat) (T : Tree V_T E_T) (G : Graph V E) :=
-	exists E_MST (MST : Tree V E_MST), is_MST w MST G /\ A_included E_T E_MST /\ V_included V_T V.
+Definition is_subset_MST {V V_T: V_set} {E E_T: A_set} (w : A_set -> nat)
+	(T : Tree V_T E_T) (G : Graph V E) :=
+	{E_MST : A_set & {MST : Tree V E_MST & 
+	is_MST w MST G /\ A_included E_T E_MST /\ V_included V_T V}}.
 
 Theorem light_edge_is_safe :
 	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
-	is_subset_MST w T G -> light_edge G V' x y w ->
-	{ T' : Tree (V_union (V_single y) V') (A_union (E_set x y) E') & is_subset_MST w T' G }.
-Proof. Admitted.
+	V' <> V -> is_subset_MST w T G -> light_edge G V' x y w ->
+	{T' : Tree (⟨y⟩ ∪ V') ((E_set x y) ∪ E') & is_subset_MST w T' G}.
+Proof.
+	intros V E G C V' E' T x y w H_V'_neq_V H_T_sMST H_xy_light.
+	(* obtain the MST guarenteed by is_subset_MST *)
+	destruct H_T_sMST as [E_MST [MST [H_MST [H_ET_EMST H_V'_sub_V]]]].
+	assert (H_MST' : is_MST w MST G) by assumption.
+	destruct H_MST as [H_MST_subtree H_MST_weight_cond].
+	unfold V_included in *. unfold A_included in *.
+	(* obtain the edge crossing cut *)
+	destruct H_xy_light as [H_xy_crossing H_xy_light].
+	assert (H_xy_crossing' : edge_crossing_cut G V' x y) by assumption.
+	unfold edge_crossing_cut in H_xy_crossing.
+	assert (H_V'_nontriv : nontrivial_cut G V'). {
+		apply nontrivial_cut_points. clear H_xy_crossing'.
+		split; [apply H_V'_sub_V | split].
+		- induction T.
+			+ exists r. constructor.
+			+ exists f. repeat constructor.
+			+ subst. exact (IHT H_V'_neq_V H_ET_EMST H_V'_sub_V H_xy_crossing H_xy_light).
+		- apply (subset_but_not_equal _ _ _ H_V'_sub_V H_V'_neq_V).
+	}
+	destruct (H_xy_crossing H_V'_nontriv) as [H_EMST_xy [H_V'x H_nV'y]]; clear H_xy_crossing.
+	(* tree MST has edge crossing cut *)
+	destruct (tree_has_edge_crossing_cut G MST V' H_V'_nontriv) as [u [v [H_EMST_uv H_uv_crossing]]].
+	assert (H_uv_crossing' : edge_crossing_cut G V' u v) by assumption.
+	unfold edge_crossing_cut in H_uv_crossing.
+	destruct (H_uv_crossing H_V'_nontriv) as [H_E_uv [H_V'u H_nV'v]]; clear H_uv_crossing.
+	(* is (x -- y) in MST or not? *)
+	specialize (Tree_isa_graph V E_MST MST) as G_MST.
+	case (G_a_dec _ _ G_MST (x -- y)); intros H_xy_MST.
+	{
+		(* easy case: (x -- y) in MST => by uniqueness, equals (u -- v) *)
+		destruct (tree_edge_crossing_cut_unique G MST V' H_V'_nontriv _ _ _ _
+				H_xy_crossing' H_uv_crossing'); subst.
+		(* extend T to T' by adding u -- v *)
+		specialize (T_leaf V' E' T v u H_V'u H_nV'v) as T'.
+		exists T'. unfold is_subset_MST. exists E_MST. exists MST.
+		split; [assumption | split].
+		- unfold A_included; unfold A_union. intros a Ha. inversion Ha.
+			+ subst. inversion H.
+				* assumption.
+				* apply (G_non_directed _ _ G_MST). assumption.
+			+ subst. apply H_ET_EMST. assumption.
+		- unfold V_included; unfold V_union. intros a Ha. inversion Ha.
+			+ subst. inversion H; subst a.
+				apply (G_ina_inv2 _ _ G _ _ H_E_uv).
+			+ apply H_V'_sub_V. assumption.
+	}
+	(* hard case: (x -- y) not in MST *)
+	(* plan: exchange argument to make new tree, show it has smaller weight *)
+	exfalso.
+	assert (H_EMST_uv' : A_included (E_set u v) E_MST). {
+		intros a Ha. inversion Ha.
+		- assumption.
+		- apply (G_non_directed _ _ G_MST). assumption.
+	}
+	destruct (split_tree MST u v H_EMST_uv') as
+			[V1 [V2 [E1 [E2 [T1 [T2 [H_V1V2 [H_E1E2 [H_V1u H_V2v]]]]]]]]].
+
+
+
+
 
 Theorem prim_ends :
 	forall {V E} (G: Graph V E) (C: Connected V E) {E'} (T : Tree V E') w,
