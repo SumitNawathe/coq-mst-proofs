@@ -457,6 +457,7 @@ Proof.
 						subst. assumption.
 Qed.
 
+
 Lemma V_extract_first :
 	forall {V E x z hv tv he te},
 	Path V E x z (V_extract x (hv::tv)) (he::te) ->
@@ -483,11 +484,35 @@ Proof.
 Qed.
 
 
+Lemma V_extract_edges_helper :
+	forall {V E x y z vl el},
+	Path V E x z (V_extract x (y :: vl)) el ->
+	~ In x vl \/ exists f_lst t_lst, vl = f_lst ++ x :: t_lst.
+Proof.
+	intros V E x y z vl. generalize dependent z. generalize dependent y. generalize dependent x.
+	induction vl as [|h t]; intros.
+	- inversion H; subst; left; intros H'; inversion H'.
+	- generalize dependent H. unfold V_extract.
+		case (V_in_dec x (h::t)); intros Hx; fold V_extract; intros P.
+		+ right.
+			assert (P' : Path V E x z (V_extract x (y::t)) el). {
+				unfold V_extract; fold V_extract; assumption.
+			}
+			specialize (IHt _ _ _ _ P') as H'.
+			destruct H' as [H_nxt | [f_lst [t_lst H_comb]]].
+			* assert (H_xh : x = h). {
+				destruct Hx; solve [intuition].
+			}
+			exists nil. exists t. subst. reflexivity.
+			* exists (h::f_lst). exists t_lst. simpl. rewrite H_comb. reflexivity.
+		+ left. assumption.
+Qed.
+
 Lemma V_extract_edges' :
-	forall {V E x y z vl_yz el_yz vl_xz e},
+	forall {V E x y z vl_yz el_yz el_xz e},
 	Path V E y z vl_yz el_yz ->
-	Path V E x z (V_extract x (y :: vl_yz)) vl_xz ->
-	In e vl_xz -> In e el_yz.
+	Path V E x z (V_extract x (y :: vl_yz)) el_xz ->
+	In e el_xz -> In e el_yz.
 Proof. Admitted.
 (*
 Similar to V_extract_edges, but you need to show that in the former case,

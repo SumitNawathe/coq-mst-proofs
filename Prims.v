@@ -7,21 +7,6 @@ Require Export MST.Sets.
 Require Export MST.Cuts.
 Require Export MST.CustomNotations.
 
-Definition is_subgraph (V V' : V_set) (E E' : A_set) (T : Graph V' E') (G : Graph V E) : Prop := 
-    V_included V' V /\ A_included E' E.
-
-Definition is_subtree {V V' : V_set} {E E' : A_set} (T : Tree V' E') (G : Graph V E) : Prop := 
-    V_included V' V /\ A_included E' E.
-
-Definition is_spanning_tree {V V' : V_set} {E E' : A_set} (T : Tree V' E') (G : Graph V E) : Prop := 
-    (V' = V) /\ (is_subtree T G).
-
-Theorem connected_prop :
-	forall {V E} (G: Graph V E), V <> V_empty ->
-	(forall x y, V x -> V y -> {vl : V_list &  {el : E_list &  Walk V E x y vl el}}) ->
-	Connected V E.
-Proof. Admitted.
-
 Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : nat :=
 	match T with
 	| T_root _ => 0
@@ -422,7 +407,7 @@ Admitted.
 Theorem prim_ends :
 	forall {V E} (G: Graph V E) (C: Connected V E) {E'} (T : Tree V E') w,
 	is_subset_MST w T G -> is_MST w T G.
-Proof. intros V E G C E' T w H. unfold is_subset_MST in H. 
+Proof. intros V E G C E' T w H. unfold is_subset_MST in H.
 
 (* Show T is a subtree of G *)
 destruct H as [E_MST [MST [H_MST_is_MST [E'_incl V_incl]]]]. inversion H_MST_is_MST. unfold is_MST. split.

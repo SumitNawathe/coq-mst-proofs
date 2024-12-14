@@ -65,7 +65,7 @@ Qed.
 Definition is_spanning {V V' : V_set} {E E' : A_set} (G' : Graph V' E') (G : Graph V E) : Prop := 
   (V' = V) /\ (is_subgraph G' G).
 
-Definition is_spanning_tree (V V' : V_set) (E E' : A_set) (T : Tree V' E') (G : Graph V E) : Prop := 
+Definition is_spanning_tree {V V' : V_set} {E E' : A_set} (T : Tree V' E') (G : Graph V E) : Prop := 
   (V' = V) /\ (is_subtree T G).
 
 
@@ -210,30 +210,48 @@ Proof.
 		+ apply H0. assumption.
 Qed.
 
+
+
+Lemma nontrivial_cut_transfer :
+	forall {V E E'} (G : Graph V E) (G' : Graph V E') A,
+	nontrivial_cut G A -> nontrivial_cut G' A.
+Proof.
+	intros V E E' G G' A H_A_nontriv.
+	unfold nontrivial_cut in *.
+	destruct H_A_nontriv as [H_AV H_A_nontriv].
+	split; solve [assumption].
+Qed.
+
+
 Theorem tree_has_edge_crossing_cut :
 	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, E ⊆ GE -> nontrivial_cut G A ->
 	{x: Vertex & {y: Vertex & (x -- y) ∈ E /\ edge_crossing_cut G A x y}}.
 Proof.
 	intros V GE E G T A H_E_GE H_A_nontriv.
 	specialize (Tree_isa_connected _ _ T) as Tcon.
+	specialize (Tree_isa_graph _ _ T) as GT.
+	specialize (nontrivial_cut_transfer G GT A H_A_nontriv) as H_A_nontriv'.
 	(* nontrivial cut => get points inside and outside *)
-	specialize (nontrivial_cut_point_inside _ _ G A H_A_nontriv) as [x H_Ax].
-	specialize (nontrivial_cut_point_outside _ _ G A H_A_nontriv) as [y H_Vy H_not_Ay].
+	specialize (nontrivial_cut_point_inside _ _ GT A H_A_nontriv) as [x H_Ax].
+	specialize (nontrivial_cut_point_outside _ _ GT A H_A_nontriv) as [y H_Vy H_not_Ay].
 	(* connected => walk between points => crossing edge *)
-	assert (H_A_nontriv' : nontrivial_cut G A) by assumption.
-	destruct H_A_nontriv as [H_AV H_A_nontriv].
+	assert (H_A_nontriv'' : nontrivial_cut GT A) by assumption.
+	destruct H_A_nontriv' as [H_AV H_A_nontriv'].
 	assert (H_Vx : x ∈ V) by (apply H_AV; assumption).
 	specialize (Connected_walk _ _ Tcon x y H_Vx H_Vy) as [vl [el H_walk]].
 	assert (H_V_subset_V : V ⊆ V) by (apply self_inclusion).
-	specialize (lift_walk H_V_subset_V H_E_GE H_walk) as H_walk'.
-	specialize (find_crossing_edge_on_walk G A x y vl el H_A_nontriv' H_Ax H_not_Ay H_walk') as H.
-	destruct (find_crossing_edge_on_walk G A x y vl el H_A_nontriv' H_Ax H_not_Ay H_walk') as
+	specialize (find_crossing_edge_on_walk GT A x y vl el H_A_nontriv'' H_Ax H_not_Ay H_walk) as H.
+	destruct (find_crossing_edge_on_walk GT A x y vl el H_A_nontriv'' H_Ax H_not_Ay H_walk) as
 		[u [v edge_crossing_uv _]].
-	exists u. exists v.
-	split; try assumption.
-	unfold edge_crossing_cut in edge_crossing_uv.
-	destruct (edge_crossing_uv H_A_nontriv').
-Admitted.
+	exists u. exists v. split.
+	- unfold edge_crossing_cut in edge_crossing_uv. apply edge_crossing_uv in H_A_nontriv''.
+		destruct H_A_nontriv''. assumption.
+	- unfold edge_crossing_cut. intros H_A_nontriv_repeat.
+		split; unfold edge_crossing_cut in edge_crossing_uv;
+				apply edge_crossing_uv in H_A_nontriv''; destruct H_A_nontriv''.
+		+ apply H_E_GE. assumption.
+		+ assumption.
+Qed.
 
 
 
@@ -242,7 +260,7 @@ Theorem tree_edge_crossing_cut_unique :
 	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
 	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
 	x = u /\ y = v.
-Proof. Admitted.
-
+Proof.
+	intros.
 
 
