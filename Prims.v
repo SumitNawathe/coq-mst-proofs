@@ -30,17 +30,17 @@ Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : 
 	end.
 
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
-	is_subtree T G -> forall E_T' (T': Tree V E_T'), is_subtree T' G -> st_weight T f <= st_weight T' f.
+	is_subtree T G /\ forall E_T' (T': Tree V E_T'), is_subtree T' G -> st_weight T f <= st_weight T' f.
 
 (*
 Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
 	A ⊂ V /\ ~ trivial_cut G A.
 *)
-
-(* 
-Lemma MST_exists : forall (V : V_set) (E : A_set) (f : A_set -> nat) (G : Connected V E), exists (E_T : A_set) (T: Tree V E_T), is_MST f T G.
+ 
+Lemma MST_exists : forall (V : V_set) (E : A_set) (f : A_set -> nat) (G : Graph V E) (C : Connected V E), exists (E_T : A_set) (T: Tree V E_T), is_MST f T G.
 Proof. Admitted.
-*)
+
+(* Edge weight unique -> unique MST *)
 
 (* Definition edge_crossing_cut {V : V_set} {E : A_set} (G : Graph V E) (A : V_set) (x y: Vertex) : Prop :=
 	nontrivial_cut G A -> E (A_ends x y) /\ A x /\ ~ A y. *)
@@ -86,14 +86,60 @@ Definition is_subset_MST {V V_T: V_set} {E E_T: A_set} (w : A_set -> nat) (T : T
 
 Theorem light_edge_is_safe :
 	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
-	is_subset_MST w T G -> light_edge G V' x y w ->
+	V' <> V -> is_subset_MST w T G -> light_edge G V' x y w ->
 	{ T' : Tree (V_union (V_single y) V') (A_union (E_set x y) E') & is_subset_MST w T' G }.
 Proof. Admitted.
+
+Lemma tree_empty_edge_zero_weight : 
+  forall {V} (T : Tree V A_empty) w, st_weight T w <= 0.
+Proof.
+    intros. remember A_empty as A.
+    unfold st_weight. induction T.
+    - reflexivity.
+    - assert (H' : A_union (E_set n f) a <> A_empty). {
+        apply U_set_diff. exists (n -- f). split; [repeat constructor | intros H; inversion H].
+        }
+        contradiction.
+    - subst. apply IHT. reflexivity.
+Qed.
+
+Lemma subset_union_implies_subset_ind : forall (E A B : A_set),
+	A_included E (A_union A B) -> A_included E A /\ A_included E B.
+Proof. intros. split. 
+
+
+Lemma tree_subset_weight_bound : 
+	forall {V V' E E'} (T : Tree V E) (T': Tree V' E') w,
+	A_included E E' -> st_weight T w <= st_weight T' w.
+Proof. intros V V' E E' T. generalize dependent E'. generalize dependent V'. induction T'; intros.
+	+ simpl. apply subset_empty_is_empty with (A := E) in H. subst. apply tree_empty_edge_zero_weight.
+
+(* T_leaf *)
+	+ simpl. specialize IHT' with (w := w). 
+	(* We know A_included E (A_union (E_set n f) a) *)
+	assert (H_E_in_union_a : A_included E a). admit. apply IHT' in H_E_in_union_a. lia.
+	+ simpl. specialize IHT' with (w := w); subst. apply IHT' in H. lia.
+Admitted.
 
 Theorem prim_ends :
 	forall {V E} (G: Graph V E) (C: Connected V E) {E'} (T : Tree V E') w,
 	is_subset_MST w T G -> is_MST w T G.
-Proof. intros. unfold is_MST. intros.
+Proof. intros. unfold is_subset_MST in H. 
+
+(* Show T is a subtree of G *)
+destruct H as [E_MST [MST [H_MST_is_MST [E'_incl V_incl]]]]. inversion H_MST_is_MST. unfold is_MST. split.
+- unfold is_subtree. split.
+	+ apply V_incl.
+	+ unfold is_subtree in H. inversion H. apply included_trans with (A := E') (B := E_MST) (C := E).
+		* apply E'_incl.
+		* apply H2.
+
+(* Show T is an MST *)
+-  intros. 
+specialize (H0 E_T' T' H1) as H_MST_weight. 
+specialize (tree_subset_weight_bound T MST w) as H_T_weight_bound. 
+apply H_T_weight_bound in E'_incl. lia. 
+Qed.
 
 
 
