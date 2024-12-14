@@ -297,6 +297,94 @@ Proof.
         rewrite <- H4; rewrite <- H5; rewrite H2; trivial.
 Qed.
 
+Lemma V_extract_sublist :
+	forall u x vl, In u (V_extract x vl) -> In u vl.
+Proof.
+	intros u x vl. generalize dependent x. generalize dependent u.
+	induction vl as [|h t]; intros.
+	- inversion H.
+	- unfold V_extract in H.
+		case (V_in_dec x t) as [H_xt | H_nxt].
+		+ fold V_extract in H. right. apply (IHt u x). assumption.
+		+ right. assumption.
+Qed.
+
+Lemma Walk_to_path' :
+ forall (x y : Vertex) (vl : V_list) (el : E_list),
+ Walk v a x y vl el ->
+ {vl0 : V_list & {el0 : E_list & Path v a x y vl0 el0} & forall u, In u vl0 -> In u vl}.
+Proof.
+        intros x y vl el w; elim w; intros.
+        exists V_nil.
+        split with E_nil; apply P_null; trivial.
+        intros u Hu. assumption.
+
+        elim H; clear H; intros vl' H H_lst.
+        elim H; clear H; intros el' H.
+        case (V_in_dec x0 (y0 :: vl')) as [i|n].
+        elim (P_extract _ _ _ _ _ H i); intros.
+        exists (V_extract x0 (y0 :: vl')).
+        split with x1; auto.
+        intros u Hu.
+				apply (V_extract_sublist u x0 (y0 :: vl')) in Hu.
+				inversion Hu.
+				subst. left. reflexivity.
+				right. apply H_lst. assumption.
+
+        case (V_in_dec y0 vl') as [e|n0].
+				exists (y0 :: V_nil).
+        split with (E_ends x0 y0 :: E_nil). apply P_step.
+        replace z with y0.
+        apply P_null; apply (P_endx_inv _ _ _ _ _ _ H).
+
+        apply (P_when_cycle _ _ _ _ H); auto.
+
+        trivial.
+
+        trivial.
+
+        red; intros; elim n; rewrite H0; simpl; auto.
+
+        tauto.
+
+	simpl. tauto.
+
+        tauto.
+
+				intros u Hu.
+				inversion Hu. subst. left. reflexivity.
+				inversion H0.
+
+        exists (y0 :: vl'). split with (E_ends x0 y0 :: el').
+        apply P_step.
+        trivial.
+
+        trivial.
+
+        trivial.
+
+        red; intros; elim n; rewrite H0; simpl; auto.
+
+        trivial.
+
+        intros; absurd (In x0 vl').
+        red; intros; elim n; simpl; auto.
+
+        trivial.
+
+        red; intros.
+        elim n; inversion H1.
+        apply (P_inxyel_inxvl _ _ _ _ _ _ H x0 y0).
+        rewrite <- H3; auto.
+
+        apply (P_inxyel_inyvl _ _ _ _ _ _ H y0 x0).
+        rewrite <- H4; rewrite <- H5; rewrite H2; trivial.
+
+				intros u Hu. inversion Hu.
+				subst. left. reflexivity.
+				right. apply H_lst. assumption.
+Qed.
+
 End EXTRACTED.
 
 Section PATH_AND_DEGREE.

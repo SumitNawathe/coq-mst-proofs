@@ -96,7 +96,7 @@ Lemma union_included2 :
 Proof. intros. intros a Ha. apply H. right. assumption. Qed.
 
 Lemma tree_empty_edge_zero_weight : 
-  forall {V} (T : Tree V A_empty) w, st_weight T w <= 0.
+  forall {V} (T : Tree V A_empty) w, st_weight T w = 0.
 Proof.
     intros. remember A_empty as A.
     unfold st_weight. induction T.
@@ -108,24 +108,110 @@ Proof.
     - subst. apply IHT. reflexivity.
 Qed.
 
+
+
+
 Lemma tree_subset_weight_bound : 
 	forall {V V' E E'} (T : Tree V E) (T': Tree V' E') w,
 	A_included E E' -> st_weight T w <= st_weight T' w.
-Proof. intros V V' E E' T. generalize dependent E'. generalize dependent V'. induction T'; intros.
-	+ simpl. apply subset_empty_is_empty with (A := E) in H. subst. apply tree_empty_edge_zero_weight.
-
-(* T_leaf *)
-	+ simpl. specialize IHT' with (w := w). 
-	(* We know A_included E (A_union (E_set n f) a) *)
-	assert (H_E_in_union_a : A_included E a). admit. apply IHT' in H_E_in_union_a. lia.
-	+ simpl. specialize IHT' with (w := w); subst. apply IHT' in H. lia.
+Proof.
+	intros V V' E E' T T'. generalize dependent T. generalize dependent E. generalize dependent V.
+	induction T'; intros.
+	- fold (st_weight T w). 
+		assert (HE : E = A_empty) by apply (subset_empty_is_empty _ H). subst.
+		specialize (tree_empty_edge_zero_weight T w) as H'. lia.
+	- unfold A_included in *. simpl.
+		specialize (Tree_isa_graph V E T) as G_T.
+		case (G_a_dec _ _ G_T (n -- f)); intros H_nf.
+		+ admit.
+		+ assert (HE : E ⊆ a). {
+				intros x Hx. destruct (H x Hx) as [H' | H'].
+				- inversion H0.
+					+ subst. contradiction.
+					+ subst. exfalso. apply H_nf. apply (G_non_directed _ _ G_T). assumption.
+				- assumption.
+			}
+			specialize (IHT' _ _ T w HE) as H'. lia.
+	- simpl. subst. apply IHT'. assumption.
 Admitted.
 
+
 Lemma split_tree_weight_lemma :
+	forall {V1 E1 V2 E2 x y}
+	(T: Tree (V1 ∪ V2) (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
+	x ∈ V1 -> y ∈ V2 -> V1 ∩ V2 = ∅ -> st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
+Proof.
+	intros V1 E1 V2 E2 x y T T1 T2 w H_V1x H_V2y H_V1V2.
+	remember (V1 ∪ V2) as V. remember (E_set x y ∪ (E1 ∪ E2)) as E.
+	generalize dependent T2. generalize dependent E2. generalize dependent V2.
+	generalize dependent T1. generalize dependent E1. generalize dependent V1.
+	generalize dependent y. generalize dependent x.
+	induction T; intros.
+	- assert (HeqE' : A_empty <> E_set x y ∪ (E1 ∪ E2)). {
+			apply U_set_diff_commut. apply U_set_diff.
+			exists (x -- y). split; [repeat constructor | intros H; inversion H].
+		}
+		contradiction.
+	- simpl. unfold V_union in *; unfold A_union in *.
+		assert (Hn : n ∈ (V1 ∪ V2)) by admit.
+		assert (Hf : f ∈ (V1 ∪ V2)) by admit.
+
+		(* case (E_set n f) = (E_set x y). *)
+		(* n and f are in V1 and V2 (or reverse) *)
+		(* -> (n--f) not in E1 or E2 -> E1 ∪ E2 = a -> ok *)
+
+		(* case (E_set n f) <> (E_set x y) *)
+		(* case (n -- f) in E1 -> n and f in V1 *)
+Admitted.
+
+(* Lemma split_tree_weight_lemma :
+	forall {V1 E1 V2 E2 x y}
+	(T: Tree (V1 ∪ V2) (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
+	x ∈ V1 -> y ∈ V2 -> st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
+Proof.
+	intros V1 E1 V2 E2 x y T T1 T2 w H_V1x H_V2y.
+	remember (V1 ∪ V2) as V. remember (E_set x y ∪ (E1 ∪ E2)) as E.
+	generalize dependent T2. generalize dependent E2. generalize dependent V2.
+	generalize dependent T1. generalize dependent E1. generalize dependent V1.
+	induction T; intros.
+	- assert (HeqE' : A_empty <> E_set x y ∪ (E1 ∪ E2)). {
+			apply U_set_diff_commut. apply U_set_diff.
+			exists (x -- y). split; [repeat constructor | intros H; inversion H].
+		}
+		contradiction.
+	- simpl. *)
+
+(* Lemma split_tree_weight_lemma :
 	forall {V V1 E1 V2 E2 x y}
 	(T: Tree V (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
 	st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
-Proof. Admitted.
+Proof.
+	intros V V1 E1 V2 E2 x y T T1 T2.
+	remember (E_set x y ∪ (E1 ∪ E2)) as E.
+	generalize dependent T2. generalize dependent E2. generalize dependent V2.
+	generalize dependent T1. generalize dependent E1. generalize dependent V1.
+	induction T; intros.
+	- assert (HeqE' : A_empty <> E_set x y ∪ (E1 ∪ E2)). {
+			apply U_set_diff_commut. apply U_set_diff.
+			exists (x -- y). split; [repeat constructor | intros H; inversion H].
+		}
+		contradiction.
+	- simpl. *)
+
+
+Lemma lift_walk :
+	forall {V E x y vl el V' E'}, V ⊆ V' -> E ⊆ E' -> Walk V E x y vl el -> Walk V' E' x y vl el.
+Proof.
+	intros. induction H1.
+	- constructor. apply H. assumption.
+	- constructor.
+		+ assumption.
+		+ apply H. assumption.
+		+ apply H0. assumption.
+Qed.
+
+
+
 
 Theorem light_edge_is_safe :
 	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
@@ -190,7 +276,52 @@ Proof.
 			[V1 [V2 [E1 [E2 [T1 [T2 [H_V1V2_cap [H_V1V2_cup [H_VE1E2 [H_V1_u H_V2_v]]]]]]]]]].
 	unfold A_union in *; unfold A_included in *.
 	(* must show that x and y lie on either side of the split *)
-	assert (H_V1_x : x ∈ V1) by admit.
+	assert (H_V1_x : x ∈ V1). {
+		apply pbc; intros H_nV1_x.
+		assert (H_V2_x : x ∈ V2) by admit.
+		(* walk from v --> x *)
+		specialize (Tree_isa_connected _ _ T2) as C2.
+		destruct (Connected_walk _ _ C2 x v H_V2_x H_V2_v) as [wvl_xv [wel_xv walk_xv]].
+		(* lift walk_xv to MST *)
+		assert (H_V1V2_sub_V : V1 ∪ V2 ⊆ V). {
+			subst. apply self_inclusion.
+		}
+		assert (H_V2_V : V2 ⊆ V) by apply (union_included2 H_V1V2_sub_V).
+		assert (H_E2_sub_EMST : E2 ⊆ E_MST). {
+			intros a Ha.
+			case (A_eq_dec a (u -- v)); intros H_a_uv;
+				try solve [subst; assumption].
+			case (A_eq_dec a (v -- u)); intros H_a_vu;
+				try solve [subst; apply (G_non_directed _ _ G_MST); assumption].
+			specialize (U_eq_set _ _ _ H_VE1E2 a) as H'.
+			assert (H_a_E1E2 : (E1 ∪ E2) a) by (right; assumption).
+			apply H' in H_a_E1E2. inversion H_a_E1E2. assumption.
+		}
+		specialize (lift_walk H_V2_V H_E2_sub_EMST walk_xv) as walk_xv'.
+		(* walk from x --> u *)
+		specialize (Tree_isa_connected _ _ T) as CV'.
+		destruct (Connected_walk _ _ CV' u x H_V'u H_V'x) as [wvl_ux [wel_ux walk_ux]].
+		(* lift walk_ux to MST *)
+		specialize (lift_walk H_V'_sub_V H_ET_EMST walk_ux) as walk_ux'.
+		(* join to get walk from v --> x --> u *)
+		specialize (Walk_append _ _ u x v _ _ _ _ walk_ux' walk_xv') as walk_uv.
+		(* make it a path from v --> u, using the improved version *)
+		destruct (Walk_to_path' _ _ _ _ _ _ walk_uv) as [pvl [pel path_uv] p_vl_cond].
+		(* extend using v -- u to make a cycle *)
+		assert (H_EMST_vu : E_MST (v -- u)) by (apply (G_non_directed _ _ G_MST); assumption).
+		assert (H_Vv : V v) by apply (G_ina_inv1 _ _ G_MST _ _ H_EMST_vu).
+		assert (H_vnu : v <> u) by (intros H_vu; subst; contradiction).
+		assert (H_u_not_in_pvl : ~ In u pvl) by admit.
+		assert (H_vrefl : In v pvl -> v = v) by (intros; reflexivity).
+		assert (H_no_vu_in_pel : forall u0, In u0 pel -> ~ E_eq u0 (v ~~ u)) by admit.
+		specialize (P_step V E_MST v u v pvl pel path_uv H_Vv
+			H_EMST_vu H_vnu H_u_not_in_pvl H_vrefl H_no_vu_in_pel) as p_cyc.
+		(* cycle in tree -> contradiction *)
+		assert (cyc: Cycle _ _ _ _ _ _ p_cyc) by constructor.
+		specialize (Tree_isa_acyclic _ _ MST) as A_MST.
+		specialize (Acyclic_no_cycle _ _ A_MST _ _ _ _ p_cyc cyc); intros Hvl.
+		discriminate.
+	}
 	assert (H_V2_y : y ∈ V2) by admit.
 	(* use x -- y to join the trees *)
 	specialize (join_trees T1 T2 x y H_V1V2_cap H_V1_x H_V2_y) as T_new.
