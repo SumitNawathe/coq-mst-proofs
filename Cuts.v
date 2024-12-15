@@ -195,6 +195,38 @@ Proof.
 			* assumption.
 Qed.
 
+Lemma find_crossing_edge_on_walk' :
+    forall {V E} (G: Graph V E) A x z vl el,
+    nontrivial_cut G A -> x ∈ A -> z ∉ A -> Walk V E x z vl el ->
+		{u & {v & (edge_crossing_cut G A u v /\ In (u~~v) el) &
+		{vl1 & {el1 & {vl2 & {el2 & Walk V E x u vl1 el1 & Walk V E v z vl2 el2}}}}}}.
+Proof.
+	intros V E G A x z vl. generalize dependent z. generalize dependent x.
+	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_walk;
+	inversion H_walk; subst; try solve [contradiction].
+	case (set_in_dec h A); [intros H_Ah | intros H_nAh].
+	- (* h ∈ A -> cross in later part of walk *)
+		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+		inversion H as [u [v H_cross [vl1 [el1 [vl2 [el2 H_walk1 H_walk2]]]]]].
+		exists u. exists v.
+		+ destruct H_cross. split.
+			* assumption.
+			* apply in_cons. assumption.
+		+	exists (h::vl1). exists ((x ~~ h)::el1).
+			exists vl2. exists el2; try solve [simpl; f_equal; assumption].
+		constructor 2; solve [assumption].
+	- (* h ∉ A -> x -- h is the cross *)
+		exists x. exists h.
+		+ split.
+			* constructor.
+				-- assumption.
+				-- split; assumption.
+			* left. reflexivity.
+		+ exists nil. exists nil. exists t. exists el0.
+			* constructor. assumption.
+			* assumption.
+Qed.
+
 
 
 (* Edges crossing cut with a tree *)
