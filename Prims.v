@@ -7,6 +7,7 @@ Require Export MST.Sets.
 Require Export MST.Cuts.
 Require Export MST.CustomNotations.
 Require Export MST.OrderSizeLemmas. 
+Require Export MST.CycleLemmas.
 
 Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : nat :=
 	match T with
@@ -333,18 +334,55 @@ Proof.
 		- apply (tree_Vempty_contra T H_V'2).
 	}
 	destruct (H_xy_crossing H_V'_nontriv) as [H_EMST_xy [H_V'x H_nV'y]]; clear H_xy_crossing.
-	(* tree MST has edge crossing cut *)
-	destruct (tree_has_edge_crossing_cut G MST V' H_V'_nontriv) as [u [v [H_EMST_uv H_uv_crossing]]].
-	assert (H_uv_crossing' : edge_crossing_cut G V' u v) by assumption.
+	(* tree MST has an xy path *)
+	specialize (Tree_isa_connected _ _ MST) as C_MST.
+	assert (H_Vx : V x) by apply (G_ina_inv1 _ _ G _ _ H_EMST_xy).
+	assert (H_Vy : V y) by apply (G_ina_inv2 _ _ G _ _ H_EMST_xy).
+	destruct (Connected_walk _ _ C_MST x y H_Vx H_Vy) as [og_xy_vl_w [og_xy_el_w og_xy_walk]].
+	specialize (Walk_to_path _ _ _ _ _ _ og_xy_walk) as [og_xy_pvl [og_xy_pel og_xy_path]].
+	clear og_xy_walk.
+	(* this path must have an edge crossing the cut *)
+	specialize (Tree_isa_graph _ _ MST) as G_MST.
+	specialize (nontrivial_cut_transfer G G_MST V' H_V'_nontriv) as H_V'_nontriv_transfer.
+	destruct (find_crossing_edge_on_path G_MST V' _ _ _ _ H_V'_nontriv_transfer H_V'x H_nV'y og_xy_path)
+			as [u [v [H_uv_crossing H_uv_in_og_xy_el] [xu_vl [xu_el [vy_vl [vy_el og_xy_vl_equiv og_xy_el_equiv]]]]]].
+	assert (H_uv_crossing' : edge_crossing_cut G V' u v). {
+		unfold edge_crossing_cut; intros H_V'_nontriv_again.
+		unfold edge_crossing_cut in H_uv_crossing.
+		destruct (H_uv_crossing H_V'_nontriv_again) as [H_EMST_uv H_V'_uv].
+		split; try solve [assumption].
+		destruct H_MST_subtree. destruct H0. apply H1. assumption.
+	}
+	assert (H_uv_crossing'' : edge_crossing_cut G V' u v) by assumption.
 	unfold edge_crossing_cut in H_uv_crossing.
-	destruct (H_uv_crossing H_V'_nontriv) as [H_E_uv [H_V'u H_nV'v]]; clear H_uv_crossing.
+	destruct (H_uv_crossing H_V'_nontriv) as [H_EMST_uv [H_V'u H_nV'v]]; clear H_uv_crossing.
+	assert (H_E_uv : E (u -- v)). {
+		unfold edge_crossing_cut in H_uv_crossing'.
+		destruct (H_uv_crossing' H_V'_nontriv) as [H_EMST_uv' H_V'_uv].
+		destruct H_MST_subtree. destruct H0. apply H1. assumption.
+	}
 	(* is (x -- y) in MST or not? *)
-	specialize (Tree_isa_graph V E_MST MST) as G_MST.
 	case (G_a_dec _ _ G_MST (x -- y)); intros H_xy_MST.
 	{
-		(* easy case: (x -- y) in MST => by uniqueness, equals (u -- v) *)
-		destruct (tree_edge_crossing_cut_unique G MST V' H_V'_nontriv _ _ _ _
-				H_xy_crossing' H_uv_crossing'); subst.
+		(* easy case: (x -- y) in MST *)
+		(* use path uniqueness in trees to show that (x -- y) = (x --> u -- v --> y) *)
+		(* then (x -- y) = (u -- v) *)
+		assert (H_xy_uv_eq : x = u /\ y = v). {
+			(* construct the path from x -- y by the edge *)
+			specialize (P_null V E_MST y H_Vy) as Pyy.
+			assert (H_x_neq_y : x <> y) by (intros H_x_eq_y; subst; contradiction).
+			assert (H_y_notin_nil : ~ In y nil) by (intros H; contradiction).
+			assert (H_bad : In x nil -> x = y) by (intros H; inversion H).
+			assert (H_worse : forall u, In u nil -> ~ E_eq u (x~~y)) by (intros r H; inversion H).
+			specialize (P_step V E_MST x y y nil nil Pyy H_Vx H_xy_MST H_x_neq_y H_y_notin_nil H_bad H_worse) as P_xy'.
+			(* use path uniqueness in tree *)
+			specialize (Tree_isa_acyclic _ _ MST) as A_MST.
+			destruct (path_uniq_in_acyclic _ _ A_MST _ _ _ _ _ _ P_xy' og_xy_path) as [vl_eq el_eq].
+			subst. simpl in *. rewrite <- el_eq in H_uv_in_og_xy_el.
+			inversion H_uv_in_og_xy_el; try solve [contradiction].
+			inversion H; subst; split; reflexivity.
+		}
+		destruct H_xy_uv_eq; subst.
 		(* extend T to T' by adding u -- v *)
 		specialize (T_leaf V' E' T v u H_V'u H_nV'v) as T'.
 		exists T'. unfold is_subset_MST. exists E_MST. exists MST.
@@ -433,7 +471,7 @@ Proof.
 		specialize (lift_walk H_V'_sub_V H_ET_EMST walk_ux') as walk_ux''.
 		(* join to get walk from v --> x --> u *)
 		specialize (Walk_append _ _ u x v _ _ _ _ walk_ux'' walk_xv'') as walk_uv.
-		(* make it a path from v --> u, using the improved version *)
+		(* make it a path from v --> u, using the improved lemma *)
 		destruct (Walk_to_path'' _ _ _ _ _ _ walk_uv) as [pvl [pel path_uv path_el_cond] p_vl_cond].
 		(* extend using v -- u to make a cycle *)
 		assert (H_EMST_vu : E_MST (v -- u)) by (apply (G_non_directed _ _ G_MST); assumption).

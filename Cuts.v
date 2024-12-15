@@ -214,7 +214,7 @@ Proof.
 			* apply in_cons. assumption.
 		+	exists (h::vl1). exists ((x ~~ h)::el1).
 			exists vl2. exists el2; try solve [simpl; f_equal; assumption].
-		constructor 2; solve [assumption].
+			constructor 2; solve [assumption].
 	- (* h ∉ A -> x -- h is the cross *)
 		exists x. exists h.
 		+ split.
@@ -225,6 +225,40 @@ Proof.
 		+ exists nil. exists nil. exists t. exists el0.
 			* constructor. assumption.
 			* assumption.
+Qed.
+
+
+
+Lemma find_crossing_edge_on_path :
+	forall {V E} (G: Graph V E) A x z vl el,
+	nontrivial_cut G A -> x ∈ A -> z ∉ A -> Path V E x z vl el ->
+	{u & {v & (edge_crossing_cut G A u v /\ In (u~~v) el) &
+	{vl1 & {el1 & {vl2 & {el2 & vl = vl1 ++ v :: vl2 & el = el1 ++ el2}}}}}}.
+Proof.
+	intros V E G A x z vl. generalize dependent z. generalize dependent x.
+	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_path.
+	{ inversion H_path; subst; try solve [contradiction]. }
+	case (set_in_dec h A); [intros H_Ah | intros H_nAh].
+	- (* h ∈ A -> cross in later part of walk *)
+		inversion H_path; subst.
+		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+		inversion H as [u [v H_cross [vl1 [el1 [vl2 [el2 vl_prop el_prop]]]]]].
+		exists u. exists v.
+		+ destruct H_cross. split.
+			* assumption.
+			* apply in_cons. assumption.
+		+	exists (h::vl1). exists ((x ~~ h)::el1).
+			exists vl2. exists el2; try solve [simpl; f_equal; assumption].
+	- (* h ∉ A -> x -- h is the cross *)
+		exists x. exists h.
+		+ split.
+			* constructor.
+				-- inversion H_path. assumption.
+				-- split; assumption.
+			* inversion H_path. left. reflexivity.
+		+ exists nil. exists nil. exists t. exists el.
+			* constructor.
+			* inversion H_path. simpl. reflexivity.
 Qed.
 
 
@@ -241,7 +275,6 @@ Proof.
 		+ apply H. assumption.
 		+ apply H0. assumption.
 Qed.
-
 
 
 Lemma nontrivial_cut_transfer :
@@ -292,6 +325,15 @@ Theorem tree_edge_crossing_cut_unique :
 	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
 	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
 	x = u /\ y = v.
+Proof. Admitted.
+
+
+
+Theorem tree_edge_crossing_cut_unique' :
+	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
+	forall x y u v vl el, Walk V E x y vl el -> In (u~~v) el -> 
+	edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
+	(x--y) ∈ E ->	x = u /\ y = v.
 Proof. Admitted.
 
 
