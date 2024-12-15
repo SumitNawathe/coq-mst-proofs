@@ -6,6 +6,7 @@ Require Export MST.Connected.
 Require Export MST.Sets.
 Require Export MST.Cuts.
 Require Export MST.CustomNotations.
+Require Export MST.OrderSizeLemmas. 
 
 Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : nat :=
 	match T with
@@ -14,8 +15,30 @@ Fixpoint st_weight {V : V_set} {E : A_set} (T : Tree V E) (f: (A_set -> nat)) : 
 	| T_eq V _ A _ _ _ T => (st_weight T f)
 	end.
  
+(* The weight of edges in a list *)
+Fixpoint elist_weight (E : E_list) (f : (A_set -> nat)) : nat := 
+	match E with 
+	| nil => 0 
+	| (E_ends x y) :: t => f (E_set x y) + elist_weight t f
+	end.  
+
+Lemma st_weight_elist_weight_equiv : forall {V} {E} (T : Tree V E) (w : A_set -> nat), 
+	st_weight T w = elist_weight (TE_list T) w.
+Proof. 
+	intros V E T w. induction T.
+	- reflexivity.
+	- simpl. specialize (E_set_eq n f) as H_E_set_equiv. 
+	assert (H_w_equiv : w (E_set f n) = w (E_set n f)). {
+		rewrite -> H_E_set_equiv. reflexivity. 
+	} 
+	rewrite -> H_w_equiv.
+	rewrite -> IHT. reflexivity. 
+	- simpl. apply IHT.
+Qed.
+
+
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
-	is_spanning_tree T G /\ forall E_T' (T': Tree V E_T'), is_spanning_tree T' G -> st_weight T f <= st_weight T' f.
+	is_spanning_tree V V E E_T T G /\ forall E_T' (T': Tree V E_T'), is_spanning_tree V V E E_T' T' G -> st_weight T f <= st_weight T' f.
 
 (*
 Definition nontrivial_cut {V : V_set} {E : A_set} (G: Graph V E) (A : V_set) : Prop :=
@@ -435,7 +458,7 @@ Proof.
 		lia.
 	}
 	(* show that T_new is subtree of G *)
-	assert (H_Tnew_subtree : is_spanning_tree T_new G). {
+	assert (H_Tnew_subtree : is_spanning_tree V V E E_new T_new G). {
 		unfold is_spanning_tree. split; try solve [reflexivity].
 		unfold is_subtree. split; try solve [apply self_inclusion].
 		destruct H_MST_subtree as [_ [_ H_MST_Eincl]]. unfold A_included in *.
@@ -453,13 +476,14 @@ Admitted.
 Theorem prim_ends :
 	forall {V E} (G: Graph V E) (C: Connected V E) {E'} (T : Tree V E') w,
 	is_subset_MST w T G -> is_MST w T G.
-Proof. intros V E G C E' T w H. unfold is_subset_MST in H.
+Proof. intros V E G C E' T w H. unfold is_subset_MST in H. 
 
 (* Show T is a subtree of G *)
 destruct H as [E_MST [MST [H_MST_is_MST [E'_incl V_incl]]]]. inversion H_MST_is_MST. unfold is_MST. split.
 - unfold is_subtree. split.
-	+ apply V_incl.
-	+ unfold is_subtree in H. inversion H. apply included_trans with (A := E') (B := E_MST) (C := E).
+	+ reflexivity.
+	+ unfold is_subtree in H. inversion H. unfold is_subtree. split. apply V_incl. 
+	apply included_trans with (A := E') (B := E_MST) (C := E).
 		* apply E'_incl.
 		* apply H2.
 
