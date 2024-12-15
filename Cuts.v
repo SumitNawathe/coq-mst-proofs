@@ -260,7 +260,6 @@ Theorem tree_edge_crossing_cut_unique :
 	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
 	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
 	x = u /\ y = v.
-Proof.
-	intros.
+Proof. Admitted.
 
 

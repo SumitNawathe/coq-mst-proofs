@@ -224,6 +224,57 @@ Proof.
         tauto.
 Qed.
 
+
+Lemma P_eq_edges_eq :
+	forall {V E x y z vl el1 el2},
+	Path V E x y vl el1 -> Path V E x z vl el2 -> el1 = el2.
+Proof.
+	intros V E x y z vl. generalize dependent y. generalize dependent x.
+	induction vl as [|h t]; intros x y el1 el2 p1 p2.
+	- inversion p1. inversion p2. subst. reflexivity.
+	- destruct el1 as [|el1h el1t]; inversion p1; subst.
+		destruct el2 as [|el2h el2t]; inversion p2; subst.
+		f_equal.
+		apply (IHt _ _ _ _ H3 H6).
+Qed.
+
+
+Lemma P_extract' :
+ forall (x y z : Vertex) (vl : V_list) (el : E_list),
+ Path v a y z vl el ->
+ In x (y :: vl) ->
+ {el' : E_list & Path v a x z (V_extract x (y :: vl)) el' & (forall e, In e el' -> In e el)}.
+Proof.
+	intros x y z vl. generalize dependent y.
+	induction vl as [|h t]; intros y el p Hx.
+	- exists nil.
+		+ assert (Hxy : x = y). {
+				inversion Hx; auto. inversion H.
+			}
+			subst. unfold V_extract.
+			case (V_in_dec y nil); intros H_y; try solve [inversion H_y].
+			inversion p; subst. constructor. assumption.
+		+ intros e He. inversion He.
+	- specialize (IHt) as H'.
+		elim (P_backstep _ _ _ _ _ _ _ p); intros.
+		unfold V_extract.
+		case (V_in_dec x (h :: t)); fold V_extract; intros.
+		+ assert (H_h_ht : In h (h::t)) by (left; reflexivity).
+			destruct (H' h x0 p0 i) as [el' P' H_el'].
+			exists el'.
+			* unfold V_extract in P'; fold V_extract in P'. assumption.
+			* intros e He_el'.
+				destruct el as [|elh elt]; inversion p; subst.
+				specialize (P_eq_edges_eq p0 H3) as H_eq.
+				subst. right. apply H_el'. assumption.
+		+ exists el.
+			* assert (H_xy : x = y) by (inversion Hx; auto; contradiction).
+				subst. assumption.
+			* intros e He. assumption.
+Qed.
+
+
+
 Remark P_when_cycle :
  forall (x y : Vertex) (vl : V_list) (el : E_list),
  Path v a x y vl el -> In x vl -> x = y.
@@ -484,7 +535,7 @@ Proof.
 Qed.
 
 
-Lemma V_extract_edges_helper :
+Lemma V_extract_edges_split :
 	forall {V E x y z vl el},
 	Path V E x z (V_extract x (y :: vl)) el ->
 	~ In x vl \/ exists f_lst t_lst, vl = f_lst ++ x :: t_lst.
@@ -508,21 +559,6 @@ Proof.
 		+ left. assumption.
 Qed.
 
-Lemma V_extract_edges' :
-	forall {V E x y z vl_yz el_yz el_xz e},
-	Path V E y z vl_yz el_yz ->
-	Path V E x z (V_extract x (y :: vl_yz)) el_xz ->
-	In e el_xz -> In e el_yz.
-Proof. Admitted.
-(*
-Similar to V_extract_edges, but you need to show that in the former case,
-if you have an edge x -- q with q in vl_yz, then (x -- q) was originally in el_yz
-basically need show that when extracting, either
-1. x does not appear in the original list, in which case ok, the first edge is good
-2. x does appear in the list -> the last vertex in the list before it becomes valid is x,
-	 so the x--q edge is in the original list before extraction
-*)
-
 
 
 Lemma Walk_to_path'' :
@@ -531,93 +567,90 @@ Lemma Walk_to_path'' :
 	{vl0 : V_list & {el0 : E_list & Path v a x y vl0 el0
 		& forall e, In e el0 -> In e el} & forall u, In u vl0 -> In u vl}.
 Proof.
-        intros x y vl el w; elim w; intros.
-        exists V_nil.
-        exists E_nil. apply P_null; trivial.
-				intros e Hu. assumption.
-        intros u Hu. assumption.
+	intros x y vl el w. induction w; intros.
+	exists V_nil.
+	exists E_nil. apply P_null; trivial.
+	intros e Hu. assumption.
+	intros u Hu. assumption.
 
-        elim H; clear H; intros vl' H H_lst.
-        elim H; clear H; intros el' H.
-        case (V_in_dec x0 (y0 :: vl')) as [i|n].
-        elim (P_extract _ _ _ _ _ H i); intros.
-        exists (V_extract x0 (y0 :: vl')).
-				exists x1. auto.
-				intros e He.
-				specialize (V_extract_edges' H p He) as He'.
-				right. apply q. assumption.
-				unfold V_extract in p.
-        intros u Hu.
-				apply (V_extract_sublist u x0 (y0 :: vl')) in Hu.
-				inversion Hu.
-				subst. left. reflexivity.
-				right. apply H_lst. assumption.
+	destruct IHw as [vl' [el' H H_elst] H_vlst].
+	case (V_in_dec x (y :: vl')) as [i|n].
+	induction (P_extract' _ _ _ _ _ H i); intros.
+	exists (V_extract x (y :: vl')).
+	exists x0. auto.
+	intros e He.
+	specialize (V_extract_edges H p He) as [He' | He'].
 
-        case (V_in_dec y0 vl') as [e|n0].
-				exists (y0 :: V_nil).
-				exists (E_ends x0 y0 :: E_nil). apply P_step.
-        replace z with y0.
-        apply P_null; apply (P_endx_inv _ _ _ _ _ _ H).
+	destruct He' as [k [Hk1 Hk2]].
+	subst e.
+	right. apply H_elst. apply q. assumption.
+	right. apply H_elst. assumption.
+	intros u Hu.
+	apply (V_extract_sublist u x (y :: vl')) in Hu.
+	inversion Hu.
+	subst. left. reflexivity.
+	right. apply H_vlst. assumption.
 
-        apply (P_when_cycle _ _ _ _ H); auto.
+	case (V_in_dec y vl') as [e|n0].
+	exists (y :: V_nil).
+	exists (E_ends x y :: E_nil). apply P_step.
+	replace z with y.
+	apply P_null; apply (P_endx_inv _ _ _ _ _ _ H).
 
-        trivial.
+	apply (P_when_cycle _ _ _ _ H); auto.
 
-        trivial.
+	trivial.
 
-        red; intros; elim n; rewrite H0; simpl; auto.
+	trivial.
 
-        tauto.
+	red; intros; elim n; rewrite H0; simpl; auto.
 
-	simpl. tauto.
+	tauto.
 
-        tauto.
+simpl. tauto.
 
-				intros m Hm. inversion Hm. subst m. left. reflexivity.
-				inversion H0.
+	tauto.
 
-				intros u Hu.
-				inversion Hu. subst. left. reflexivity.
-				inversion H0.
+	intros m Hm. inversion Hm. subst m. left. reflexivity.
+	inversion H0.
 
-        exists (y0 :: vl'). exists (E_ends x0 y0 :: el').
-        apply P_step.
-        trivial.
+	intros u Hu.
+	inversion Hu. subst. left. reflexivity.
+	inversion H0.
 
-        trivial.
+	exists (y :: vl'). exists (E_ends x y :: el').
+	apply P_step.
+	trivial.
 
-        trivial.
+	trivial.
 
-        red; intros; elim n; rewrite H0; simpl; auto.
+	trivial.
 
-        trivial.
+	red; intros; elim n; rewrite H0; simpl; auto.
 
-        intros; absurd (In x0 vl').
-        red; intros; elim n; simpl; auto.
+	trivial.
 
-        trivial.
+	intros; absurd (In x vl').
+	red; intros; elim n; simpl; auto.
 
-        red; intros.
-        elim n; inversion H1.
-        apply (P_inxyel_inxvl _ _ _ _ _ _ H x0 y0).
-        rewrite <- H3; auto.
+	trivial.
 
-        apply (P_inxyel_inyvl _ _ _ _ _ _ H y0 x0).
-        rewrite <- H4; rewrite <- H5; rewrite H2; trivial.
+	red; intros.
+	elim n; inversion H1.
+	apply (P_inxyel_inxvl _ _ _ _ _ _ H x y).
+	rewrite <- H3; auto.
 
-				intros e He. inversion He.
-				subst e. left. reflexivity.
-				right. apply q. assumption.
+	apply (P_inxyel_inyvl _ _ _ _ _ _ H y x).
+	rewrite <- H4; rewrite <- H5; rewrite H2; trivial.
 
-				intros u Hu. inversion Hu.
-				subst. left. reflexivity.
-				right. apply H_lst. assumption.
+	intros e He. inversion He.
+	subst e. left. reflexivity.
+	right. apply H_elst. assumption.
+
+	intros u Hu. inversion Hu.
+	subst. left. reflexivity.
+	right. apply H_vlst. assumption.
 Qed.
-
-
-
-
-
 
 
 
