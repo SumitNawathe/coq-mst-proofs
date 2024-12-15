@@ -93,32 +93,78 @@ Proof.
     - subst. apply IHT. reflexivity.
 Qed.
 
+Lemma extract_union : forall (E' a: A_set) (n f : Vertex),
+	A_included (A_union (E_set n f) a) E' -> A_included a E' /\ E' (A_ends n f) /\ E' (A_ends f n).
+Proof. 
+	intros. 
+	specialize (A_included_union a (E_set n f) ) as H_incl_union. 
+	specialize (A_included_union (E_set n f) a) as H_n_f_incl_union. 
+	split. 
+		+ apply included_trans with (A := (a)) (B := (A_union (E_set n f) a)) (C := E'). 
+			- specialize (A_union_commut a (E_set n f)) as H_union_commut.
+			rewrite -> H_union_commut in H_incl_union. 
+			apply H_incl_union. 
+			- apply H. 
+		+ split. 
+			apply included_trans with (A := (E_set n f)) (B := (A_union (E_set n f) a)) (C := E'). 
+				* specialize (A_union_commut a (E_set n f)) as H_union_commut. apply H_n_f_incl_union. 
+				* apply H.
+				* apply E_right. 
+				* apply included_trans with (A := (E_set n f)) (B := (A_union (E_set n f) a)) (C := E'). apply H_n_f_incl_union. apply H.
+				apply E_left. 
+Qed. 
 
+(* subset of edges implies subset of list of edges *)
+Lemma tree_edge_subset_implies_list_subset : 
+	forall {V V' E E'} (T : Tree V E) (T' : Tree V' E'), 
+	A_included E E' -> forall e, E_in e (TE_list T) -> E_in e (TE_list T').
+Proof. 
+	intros V V' E E' T T'. intros H_E_subset. induction T.
 
+	(* T is a root *) 
+	- intros H_e_in_T. simpl. contradiction. 
+
+	(* T is a leaf *)
+	- intros e H_e_in_T. unfold TE_list in H_e_in_T. fold (TE_list T) in H_e_in_T. 
+	
+	specialize (extract_union E' a n f) as H_included. 
+	
+	specialize (H_included H_E_subset).
+	destruct H_included as [H_a_incl H_n_f_incl]. 
+	specialize (IHT H_a_incl) as H_e_gen. 
+	unfold E_in in H_e_in_T. generalize dependent H_e_in_T.
+	case (E_eq_dec e (n ~~ f)). intros.
+	
+	(* if (n,f) in E', then (n,f) in TE_list T' *) 
+	inversion e0; subst. 
+	apply (E_in_tree_list n f T'). apply H_n_f_incl. 
+
+	(* if (f,n) in E', then (f,n) in TE_list T'*)
+	apply (E_in_tree_list f n T'). destruct H_n_f_incl. apply H0.
+
+	(* if e ~= (n,f), then (n,f) in E, by IH this means it is in TE_list T' *)
+	intros. fold (E_in) in H_e_in_T. specialize (IHT H_a_incl). apply IHT with (e := e) in H_e_in_T. apply H_e_in_T.
+
+	(* T is equal to another tree *)
+	- subst. specialize (IHT H_E_subset). intros. simpl in H. apply IHT with (e := e). apply H. 
+Qed. 
 
 Lemma tree_subset_weight_bound : 
 	forall {V V' E E'} (T : Tree V E) (T': Tree V' E') w,
 	A_included E E' -> st_weight T w <= st_weight T' w.
 Proof.
-	intros V V' E E' T T'. generalize dependent T. generalize dependent E. generalize dependent V.
-	induction T'; intros.
-	- fold (st_weight T w). 
-		assert (HE : E = A_empty) by apply (subset_empty_is_empty _ H). subst.
-		specialize (tree_empty_edge_zero_weight T w) as H'. lia.
-	- unfold A_included in *. simpl.
-		specialize (Tree_isa_graph V E T) as G_T.
-		case (G_a_dec _ _ G_T (n -- f)); intros H_nf.
-		+ admit.
-		+ assert (HE : E ⊆ a). {
-				intros x Hx. destruct (H x Hx) as [H' | H'].
-				- inversion H0.
-					+ subst. contradiction.
-					+ subst. exfalso. apply H_nf. apply (G_non_directed _ _ G_T). assumption.
-				- assumption.
-			}
-			specialize (IHT' _ _ T w HE) as H'. lia.
-	- simpl. subst. apply IHT'. assumption.
-Admitted.
+	intros. specialize (tree_edge_subset_implies_list_subset T T') as H_elist_subset.
+
+	specialize (H_elist_subset H).
+
+	assert (H_elist_weight_bound : elist_weight (TE_list T) w <= elist_weight (TE_list T') w). admit. 
+
+	rewrite -> st_weight_elist_weight_equiv. 
+	rewrite -> st_weight_elist_weight_equiv.
+	apply H_elist_weight_bound. 
+
+	Admitted.
+	
 
 
 Lemma split_tree_weight_lemma :
@@ -425,18 +471,6 @@ apply H_T_weight_bound in E'_incl. lia.
 Qed.
 
 
-
-
-
-(* 
-Approach 1:
-- join trees
-- split trees
-
-Approach 2:
-- show that m=n-1 and connected -> tree
-- show that walk between any two points -> connected (1/2 done)
- *)
 
 
 
