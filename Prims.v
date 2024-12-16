@@ -265,48 +265,38 @@ Proof.
 Qed.
 
 
-(* 
-Fixpoint sum_list (l : list nat) : nat :=
-	match l with
-	| nil => 0
-	| h :: t => h + sum_list t
-	end.
 
-Lemma extract_from_nodup_list :
-	forall T (x: T) (l: list T),
-	NoDup l -> In x l ->
-	exists (l': list T),
-	(forall (y: T), In y l <-> (y = x \/ In y l')) /\ NoDup l'.
-Proof. Admitted.
-
-Lemma nat_list_lemma :
-	forall l1 l2,
-	NoDup l1 -> NoDup l2 ->
-	(forall x, In x l1 -> In x l2) ->
-	sum_list l1 <= sum_list l2.
+Lemma P_inel_inv1 :
+	forall V E (x y : Vertex) (vl : V_list) (el : E_list),
+	Path V E x y vl el ->
+	forall x' y' : Vertex, In (E_ends x' y') el -> V x'.
 Proof.
-	intros l1. induction l1; intros.
-	- simpl. lia.
-	- simpl.
-		inversion H; subst.
-		assert (H_a_in_l2 : In a l2). {
-			apply H1. left. reflexivity.
-		}
-		destruct (extract_from_nodup_list _ a l2 H0 H_a_in_l2) as [l2' [l2'_prop l2'_nodup]].
-		assert (H' : a + sum_list l2' = sum_list l2) by admit.
-		rewrite <- H'.
-		assert (Hx : forall x, In x l1 -> In x l2'). {
-			intros x Hx.
-			assert (H_x_in_l2 : In x l2). {
-				apply H1. right. assumption.
-			}
-			apply (l2'_prop x) in H_x_in_l2. destruct H_x_in_l2.
-			- subst. contradiction.
-			- assumption.
-		}
-		specialize (IHl1 l2' H5 l2'_nodup Hx). lia.
-Admitted.
- *)
+	intros V E x y vl el p; elim p; intros.
+	inversion H.
+
+	inversion H0.
+	inversion H1.
+	subst.
+	assumption.
+	apply (H _ y'). assumption.
+Qed.
+
+
+Lemma P_inel_inv2 :
+	forall V E (x y : Vertex) (vl : V_list) (el : E_list),
+	Path V E x y vl el ->
+	forall x' y' : Vertex, In (E_ends x' y') el -> V y'.
+Proof.
+	intros V E x y vl el p; elim p; intros.
+	inversion H.
+
+	inversion H0.
+	inversion H1.
+	subst.
+	clear H1. clear H0.
+	inversion p0; subst; try solve [assumption].
+	apply (H x' _). assumption.
+Qed.
 
 
 
@@ -344,8 +334,11 @@ Proof.
 	(* this path must have an edge crossing the cut *)
 	specialize (Tree_isa_graph _ _ MST) as G_MST.
 	specialize (nontrivial_cut_transfer G G_MST V' H_V'_nontriv) as H_V'_nontriv_transfer.
-	destruct (find_crossing_edge_on_path G_MST V' _ _ _ _ H_V'_nontriv_transfer H_V'x H_nV'y og_xy_path)
-			as [u [v [H_uv_crossing H_uv_in_og_xy_el] [xu_vl [xu_el [vy_vl [vy_el og_xy_vl_equiv og_xy_el_equiv]]]]]].
+	(* destruct (find_crossing_edge_on_path G_MST V' _ _ _ _ H_V'_nontriv_transfer H_V'x H_nV'y og_xy_path)
+			as [u [v [H_uv_crossing H_uv_in_og_xy_el] [xu_vl [xu_el [vy_vl [vy_el og_xy_vl_equiv og_xy_el_equiv]]]]]]. *)
+	destruct (find_last_crossing_edge_on_path G_MST V' _ _ _ _ H_V'_nontriv_transfer H_V'x H_nV'y og_xy_path)
+				as [u [v [H_uv_crossing H_uv_in_og_xy_el] [xu_vl [xu_el [vy_vl [vy_el
+				[xu_path [vy_path og_xy_vl_equiv og_xy_el_equiv]]]]]]]].
 	assert (H_uv_crossing' : edge_crossing_cut G V' u v). {
 		unfold edge_crossing_cut; intros H_V'_nontriv_again.
 		unfold edge_crossing_cut in H_uv_crossing.
@@ -388,30 +381,26 @@ Proof.
 		exists T'. unfold is_subset_MST. exists E_MST. exists MST.
 		split; [assumption | split].
 		- unfold A_included; unfold A_union. intros a Ha. inversion Ha.
-			+ subst. inversion H.
-				* assumption.
-				* apply (G_non_directed _ _ G_MST). assumption.
+			+ subst. inversion H; try solve [assumption].
+				apply (G_non_directed _ _ G_MST). assumption.
 			+ subst. apply H_ET_EMST. assumption.
 		- unfold V_included; unfold V_union. intros a Ha. inversion Ha.
-			+ subst. inversion H; subst a.
-				apply (G_ina_inv2 _ _ G _ _ H_E_uv).
+			+ subst. inversion H; subst a. apply (G_ina_inv2 _ _ G _ _ H_E_uv).
 			+ apply H_V'_sub_V. assumption.
 	}
 	(* hard case: (x -- y) not in MST *)
 	(* plan: exchange argument to make new tree, show it has smaller weight *)
 	exfalso.
 	assert (H_EMST_uv' : A_included (E_set u v) E_MST). {
-		intros a Ha. inversion Ha.
-		- assumption.
-		- apply (G_non_directed _ _ G_MST). assumption.
+		intros a Ha. inversion Ha; try solve [assumption].
+		apply (G_non_directed _ _ G_MST). assumption.
 	}
 	destruct (split_tree MST u v H_EMST_uv') as
 			[V1 [V2 [E1 [E2 [T1 [T2 [H_V1V2_cap [H_V1V2_cup [H_VE1E2 [H_V1_u H_V2_v]]]]]]]]]].
 	unfold A_union in *; unfold A_included in *.
 	(* some useful lemmas about the split *)
 	assert (H_notV1_V2 : forall n, V n -> ~ V1 n -> V2 n). {
-		intros n H_Vn H_not_V1n.
-		apply pbc; intros H_not_V2n.
+		intros n H_Vn H_not_V1n. apply pbc; intros H_not_V2n.
 		assert (H_contra : V1 ∪ V2 <> V). {
 			apply U_set_diff_commut. apply U_set_diff. exists n. split; try solve [assumption].
 			intros H. inversion H; contradiction.
@@ -419,26 +408,21 @@ Proof.
 		contradiction.
 	}
 	assert (H_notV2_V1 : forall n, V n -> ~ V2 n -> V1 n). {
-		intros n HVn H_not_V2n.
-		apply pbc; intros H_not_V1n.
+		intros n HVn H_not_V2n. apply pbc; intros H_not_V1n.
 		assert (H_contra : V1 ∪ V2 <> V). {
 			apply U_set_diff_commut. apply U_set_diff. exists n. split; try solve [assumption].
 			intros H. inversion H; contradiction.
 		}
 		contradiction.
 	}
-	assert (H_V1V2_sub_V : V1 ∪ V2 ⊆ V). {
-		subst. apply self_inclusion.
-	}
+	assert (H_V1V2_sub_V : V1 ∪ V2 ⊆ V) by (subst; apply self_inclusion).
 	(* must show that x and y lie on either side of the split *)
 	assert (H_V1_x : x ∈ V1). {
 		case (V_eq_dec x u); intros H_xu.
 		{ subst; assumption. }
 		apply pbc; intros H_nV1_x.
 		assert (H_V2_x : x ∈ V2). {
-			apply H_notV1_V2.
-			- apply H_V'_sub_V. assumption.
-			- assumption.
+			apply H_notV1_V2; [apply H_V'_sub_V; assumption | assumption].
 		}
 		(* walk from v --> x *)
 		specialize (Tree_isa_connected _ _ T2) as C2.
@@ -451,8 +435,7 @@ Proof.
 		assert (H_V2_V : V2 ⊆ V) by apply (union_included2 H_V1V2_sub_V).
 		assert (H_E2_sub_EMST : E2 ⊆ E_MST). {
 			intros a Ha.
-			case (A_eq_dec a (u -- v)); intros H_a_uv;
-				try solve [subst; assumption].
+			case (A_eq_dec a (u -- v)); intros H_a_uv; try solve [subst; assumption].
 			case (A_eq_dec a (v -- u)); intros H_a_vu;
 				try solve [subst; apply (G_non_directed _ _ G_MST); assumption].
 			specialize (U_eq_set _ _ _ H_VE1E2 a) as H'.
@@ -532,44 +515,87 @@ Proof.
 			- apply (G_ina_inv2 _ _ G _ _ H_EMST_xy).
 			- assumption.
 		}
-    (* make walk from x --> y in V1 *)
-    specialize (Tree_isa_connected _ _ T1) as C1.
-    destruct (Connected_walk _ _ C1 x y H_V1_x H_V1_y) as [wvl_xy [wel_xy walk_xy]].
-		specialize (Walk_to_path _ _ _ _ _ _ walk_xy) as [pvl_xy [pel_xy path_xy]].
-		specialize (Path_isa_trail _ _ _ _ _ _ path_xy) as trail_xy.
-		specialize (Trail_isa_walk _ _ _ _ _ _ trail_xy) as walk_xy'.
-    clear trail_xy. clear walk_xy.
-		(* transfer walk to G *)
-    assert (H_E1_EMST : E1 ⊆ E_MST). {
-      intros a Ha.
-      case (A_eq_dec a (u -- v)); intros H_a_uv; try solve [subst; assumption].
-      case (A_eq_dec a (v -- u)); intros H_a_vu;
-        try solve [subst; apply (G_non_directed _ _ G_MST); assumption].
-      specialize (U_eq_set _ _ _ H_VE1E2 a) as H'.
-      assert (H_a_E1E2 : (E1 ∪ E2) a) by (left; assumption).
-      apply H' in H_a_E1E2. inversion H_a_E1E2. assumption.
-    }
-		assert (H_EMST_E : E_MST ⊆ E). {
-			destruct H_MST_subtree. destruct H0. assumption.
+		(* walk from u --> y *)
+		specialize (Tree_isa_connected _ _ T1) as C1.
+		destruct (Connected_walk _ _ C1 y u H_V1_y H_V1_u) as [wvl_yu [wel_yu walk_yu]].
+		(* squeeze to path, then relax back to walk *)
+		specialize (Walk_to_path _ _ _ _ _ _ walk_yu) as [pvl_yu [pel_yu path_yu]].
+		specialize (Path_isa_trail _ _ _ _ _ _ path_yu) as trail_yu.
+		specialize (Trail_isa_walk _ _ _ _ _ _ trail_yu) as walk_yu'. clear trail_yu.
+		(* lift walk_yu to MST *)
+		assert (H_V1_V : V1 ⊆ V) by apply (union_included1 H_V1V2_sub_V).
+		assert (H_E1_sub_EMST : E1 ⊆ E_MST). {
+			intros a Ha.
+			case (A_eq_dec a (u -- v)); intros H_a_uv;
+				try solve [subst; assumption].
+			case (A_eq_dec a (v -- u)); intros H_a_vu;
+				try solve [subst; apply (G_non_directed _ _ G_MST); assumption].
+			specialize (U_eq_set _ _ _ H_VE1E2 a) as H'.
+			assert (H_a_E1E2 : (E1 ∪ E2) a) by (left; assumption).
+			apply H' in H_a_E1E2. inversion H_a_E1E2. assumption.
 		}
-		assert (H_E1_E : E1 ⊆ E) by (intros a Ha; apply H_EMST_E; apply H_E1_EMST; assumption).
-    assert (H_V1_sub_V : V1 ⊆ V) by apply (union_included1 H_V1V2_sub_V).
-		specialize (lift_walk H_V1_sub_V H_E1_E walk_xy') as walk_xy''.
-		(* walk crossing cut V' in G => by uniqueness, must be (u~~v) *)
-		destruct (find_crossing_edge_on_walk' G V' x y pvl_xy pel_xy H_V'_nontriv H_V'x H_nV'y walk_xy'')
-				as [p [q [H_pq_crossing H_pq_pel] _]].
-		destruct (tree_edge_crossing_cut_unique G MST V' H_V'_nontriv _ _ _ _
-			H_pq_crossing H_uv_crossing'); subst.
-		(* u~~v in V1 => V in V1 => contradiction *)
-		specialize (P_inel_ina _ _ _ _ _ _ path_xy _ _ H_pq_pel) as H_pq_E1.
-		specialize (Tree_isa_graph _ _ T1) as G1.
-		specialize (G_ina_inv2 _ _ G1 _ _ H_pq_E1) as H_V1v.
-		assert (V1 ∩ V2 <> ∅). {
-			apply U_set_diff. exists v. split.
-			- split; assumption.
-			- intros H. inversion H.
+		specialize (lift_walk H_V1_V H_E1_sub_EMST walk_yu') as walk_yu''.
+		(* take the original walk from y --> v, relax to walk, lift to MST,  *)
+		specialize (Path_isa_trail _ _ _ _ _ _ vy_path) as trail_vy.
+		specialize (Trail_isa_walk _ _ _ _ _ _ trail_vy) as walk_vy'. clear trail_vy.
+		assert (H_diff_included : (V\V') ⊆ V). {
+			intros a Ha. inversion Ha. assumption.
 		}
-		contradiction.
+		assert (EMST_sub_self : E_MST ⊆ E_MST) by apply self_inclusion.
+		specialize (lift_walk H_diff_included EMST_sub_self walk_vy') as walk_vy''.
+		(* join to get walk from u --> y --> v *)
+		specialize (Walk_append _ _ v y u _ _ _ _ walk_vy'' walk_yu'') as walk_vu.
+		(* make it a path from v --> u, using the improved lemma *)
+		destruct (Walk_to_path'' _ _ _ _ _ _ walk_vu) as [pvl [pel path_vu path_el_cond] p_vl_cond].
+		(* extend using v -- u to make a cycle *)
+		assert (H_Vu : V u) by apply (G_ina_inv1 _ _ G_MST _ _ H_EMST_uv).
+		assert (H_unv : u <> v) by (intros H_uv; subst; contradiction).
+		assert (H_v_not_in_pvl : ~ In v pvl). {
+			intros H_v_pvl. apply p_vl_cond in H_v_pvl.
+			destruct (in_app_or _ _ _ H_v_pvl) as [H_v_wvl_vy | H_v_wvl_yu].
+			- assert (H_vy' : v = y) by apply (P_when_cycle _ _ _ _ _ _ vy_path H_v_wvl_vy).
+				symmetry in H_vy'. contradiction.
+			- assert (H_V1v : v ∈ V1) by apply (P_invl_inv _ _ _ _ _ _ path_yu _ H_v_wvl_yu).
+				assert (H_V1V2_cap' : V1 ∩ V2 <> ∅). {
+					apply U_set_diff. exists v. split.
+					- split; assumption.
+					- intros H. inversion H.
+				}
+				contradiction.
+		}
+		assert (H_urefl : In u pvl -> u = u) by (intros; reflexivity).
+		assert (H_no_uv_in_pel : forall u0, In u0 pel -> ~ E_eq u0 (u ~~ v)). {
+			intros e He_pel He_uv. apply path_el_cond in He_pel.
+			destruct (in_app_or _ _ _ He_pel) as [He1 | He2].
+			- inversion He_uv; subst.
+				+ specialize (P_inel_inv1 _ _ _ _ _ _ vy_path u v He1) as H'.
+					inversion H'; subst. contradiction.
+				+ specialize (P_inel_inv2 _ _ _ _ _ _ vy_path v u He1) as H'.
+					inversion H'; subst. contradiction.
+			- specialize (Tree_isa_graph _ _ T1) as G1.
+				inversion He_uv; subst; specialize (P_inel_ina _ _ _ _ _ _ path_yu _ _ He2) as H'.
+				+ specialize (G_ina_inv2 _ _ G1 _ _ H') as H_V2y.
+					assert (H_contra : V1 ∩ V2 <> ∅). {
+						apply U_set_diff. exists v. split.
+						- split; assumption.
+						- intros H. inversion H.
+					}
+					contradiction.
+				+ specialize (G_ina_inv1 _ _ G1 _ _ H') as H_V1u.
+					assert (H_contra : V1 ∩ V2 <> ∅). {
+						apply U_set_diff. exists v. split.
+						- split; assumption.
+						- intros H. inversion H.
+					}
+					contradiction.
+		}
+		specialize (P_step V E_MST u v u pvl pel path_vu H_Vu
+			H_EMST_uv H_unv H_v_not_in_pvl H_urefl H_no_uv_in_pel) as p_cyc.
+		(* cycle in tree -> contradiction *)
+		assert (cyc: Cycle _ _ _ _ _ _ p_cyc) by constructor.
+		specialize (Tree_isa_acyclic _ _ MST) as A_MST.
+		specialize (Acyclic_no_cycle _ _ A_MST _ _ _ _ p_cyc cyc); intros Hvl.
+		discriminate.
 	}
 	(* use x -- y to join the trees *)
 	specialize (join_trees T1 T2 x y H_V1V2_cap H_V1_x H_V2_y) as T_new.

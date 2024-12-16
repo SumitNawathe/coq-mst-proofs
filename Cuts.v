@@ -227,8 +227,6 @@ Proof.
 			* assumption.
 Qed.
 
-
-
 Lemma find_crossing_edge_on_path :
 	forall {V E} (G: Graph V E) A x z vl el,
 	nontrivial_cut G A -> x ∈ A -> z ∉ A -> Path V E x z vl el ->
@@ -260,6 +258,124 @@ Proof.
 			* constructor.
 			* inversion H_path. simpl. reflexivity.
 Qed.
+
+Lemma find_crossing_edge_on_path' :
+	forall {V E} (G: Graph V E) A x z vl el,
+	nontrivial_cut G A -> x ∈ A -> z ∉ A -> Path V E x z vl el ->
+	{u & {v & (edge_crossing_cut G A u v /\ In (u~~v) el) &
+	{vl1 & {el1 & {vl2 & {el2 &
+	{p1 : Path V E x u vl1 el1 & {p2 : Path V E v z vl2 el2 & vl = vl1 ++ v :: vl2 & el = el1 ++ (u~~v)::el2
+	}}}}}}}}.
+Proof.
+	intros V E G A x z vl. generalize dependent z. generalize dependent x.
+	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_path.
+	{ inversion H_path; subst; try solve [contradiction]. }
+	case (set_in_dec h A); [intros H_Ah | intros H_nAh].
+	- (* h ∈ A -> cross in later part of walk *)
+		inversion H_path; subst.
+		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+		inversion H as [u [v H_cross [vl1 [el1 [vl2 [el2 [p1 [p2 vl_prop el_prop]]]]]]]].
+		exists u. exists v.
+		+ destruct H_cross. split.
+			* assumption.
+			* apply in_cons. assumption.
+		+	exists (h::vl1). exists ((x ~~ h)::el1).
+			exists vl2. exists el2; try solve [simpl; f_equal; assumption].
+			assert (H_h_notin_vl1 : ~ In h vl1). {
+				intros H_h_vl1.
+				assert (H_h_in_t : In h t) by (subst; apply in_or_app; left; assumption).
+				contradiction.
+			}
+			assert (H_x_vl1_bad : In x vl1 -> x = u). {
+				intros H_x_vl1.
+				assert (H_x_in_t : In x t) by (subst; apply in_or_app; left; assumption).
+				apply H8 in H_x_in_t. subst.
+				contradiction.
+			}
+			assert (H_edges_bad : forall u, In u el1 -> ~ E_eq u (x~~h)). {
+				intros k Hk.
+				assert (H_k_in_el0 : In k el0) by (subst; apply in_or_app; left; assumption).
+				apply H10. assumption.
+			}
+			specialize (P_step V E x h u vl1 el1 p1 H2 H3 H4 H_h_notin_vl1 H_x_vl1_bad H_edges_bad) as P1.
+			exists P1. exists p2. simpl. f_equal. assumption. simpl. f_equal. assumption.
+	- (* h ∉ A -> x -- h is the cross *)
+		exists x. exists h.
+		+ split.
+			* constructor.
+				-- inversion H_path. assumption.
+				-- split; assumption.
+			* inversion H_path. left. reflexivity.
+
+		+ exists nil. exists nil.
+			inversion H_path; subst. exists t. exists el0. constructor.
+			* constructor. destruct H_A_nontrivial. apply H. assumption.
+			* exists H1. simpl. reflexivity. simpl. reflexivity.
+Qed.
+
+
+
+
+Lemma find_last_crossing_edge_on_path :
+	forall {V E} (G: Graph V E) A x z vl el,
+	nontrivial_cut G A -> x ∈ A -> z ∉ A -> Path V E x z vl el ->
+	{u & {v & (edge_crossing_cut G A u v /\ In (u~~v) el) &
+	{vl1 & {el1 & {vl2 & {el2 &
+	{p1 : Path V E x u vl1 el1 & {p2 : Path (V\A) E v z vl2 el2 & vl = vl1 ++ v :: vl2 & el = el1 ++ (u~~v)::el2
+	}}}}}}}}.
+Proof.
+	intros V E G A x z vl. generalize dependent z. generalize dependent x.
+	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_path.
+	{ inversion H_path; subst; try solve [contradiction]. }
+	case (set_in_dec h A); [intros H_Ah | intros H_nAh].
+	- (* h ∈ A -> cross in later part of walk *)
+		inversion H_path; subst.
+		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+		inversion H as [u [v H_cross [vl1 [el1 [vl2 [el2 [p1 [p2 vl_prop el_prop]]]]]]]].
+		exists u. exists v.
+		+ destruct H_cross. split.
+			* assumption.
+			* apply in_cons. assumption.
+		+	exists (h::vl1). exists ((x ~~ h)::el1).
+			exists vl2. exists el2; try solve [simpl; f_equal; assumption].
+			assert (H_h_notin_vl1 : ~ In h vl1). {
+				intros H_h_vl1.
+				assert (H_h_in_t : In h t) by (subst; apply in_or_app; left; assumption).
+				contradiction.
+			}
+			assert (H_x_vl1_bad : In x vl1 -> x = u). {
+				intros H_x_vl1.
+				assert (H_x_in_t : In x t) by (subst; apply in_or_app; left; assumption).
+				apply H8 in H_x_in_t. subst.
+				contradiction.
+			}
+			assert (H_edges_bad : forall u, In u el1 -> ~ E_eq u (x~~h)). {
+				intros k Hk.
+				assert (H_k_in_el0 : In k el0) by (subst; apply in_or_app; left; assumption).
+				apply H10. assumption.
+			}
+			specialize (P_step V E x h u vl1 el1 p1 H2 H3 H4 H_h_notin_vl1 H_x_vl1_bad H_edges_bad) as P1.
+			exists P1. exists p2. simpl. f_equal. assumption. simpl. f_equal. assumption.
+	- (* h ∉ A -> x -- h is the cross *)
+		exists x. exists h.
+		+ split.
+			* constructor.
+				-- inversion H_path. assumption.
+				-- split; assumption.
+			* inversion H_path. left. reflexivity.
+
+		+ exists nil. exists nil.
+			inversion H_path; subst. exists t. exists el0. constructor.
+			* constructor. destruct H_A_nontrivial. apply H. assumption.
+			* admit.
+			(* * exists H1. simpl. reflexivity. simpl. reflexivity. *)
+Admitted.
+
+
+
+
+
+
 
 
 
