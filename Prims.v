@@ -41,8 +41,14 @@ Lemma join_connected :
 	V1 x -> V2 y -> Connected (V_union V1 V2) (A_union (E_set x y) (A_union E1 E2)).
 Proof.
 	intros V1 V2 E1 E2 G1 G2 x y H_V1x H_V2y.
-	(* idea: use the connected property to get a walk between any two points *)
+	(* idea: use the connected_prop ^^ to get a walk between any two points *)
 	(* cases on which sides the two points are on; use xy if needed *)
+	(* use the axiom set_in_dec to do case analysis on which side each of the two points are *)
+	(* for instance, set_in_dec u V1 will get 2 cases, u \in V1 and u \not\in V1 *)
+	(* for the latter, use u in V_union V1 V2 to get u in V2 *)
+	(* 4 cases; 2 are easy by being in the same connected *)
+	(* for the other two, walk from one to x and the other two y, then join the walks *)
+	(* there is a Walk_append lemma somewhere already *)
 Admitted.
 
 
