@@ -14,16 +14,46 @@ Require Export MST.ImprovedPaths.
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
 	is_spanning_tree T G /\ forall E_T' (T': Tree V E_T'), is_spanning_tree T' G -> st_weight T f <= st_weight T' f.
 
-(* Exchange argument *)
-Lemma join_connected {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Connected V1 E1) (G2 : Connected V2 E2) (x y : Vertex):
-	V1 x -> V2 y -> Connected (V_union V1 V2) (A_union (E_set x y) (A_union E1 E2)).
+
+Theorem connected_prop :
+	forall {V E} (G: Graph V E), V <> ∅ ->
+	(forall x y, x ∈ V -> y ∈ V -> {vl : V_list &  {el : E_list &  Walk V E x y vl el}}) ->
+	Connected V E.
 Proof. Admitted.
 
-Lemma join_cycle_free {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Acyclic V1 E1) (G2 : Acyclic V2 E2) (u v : Vertex) : 
+Theorem connected_vert_not_empty :
+	forall {V E} (G: Connected V E), V <> ∅.
+Proof.
+	intros V E G. induction G.
+	- apply U_set_diff. exists x. split.
+		+ constructor.
+		+ intros H. inversion H.
+	- apply U_set_diff. exists y. split.
+		+ left. constructor.
+		+ intros H. inversion H.
+	- assumption.
+	- subst. assumption.
+Qed.
+
+(* Exchange argument *)
+Lemma join_connected :
+	forall {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Connected V1 E1) (G2 : Connected V2 E2) (x y : Vertex),
+	V1 x -> V2 y -> Connected (V_union V1 V2) (A_union (E_set x y) (A_union E1 E2)).
+Proof.
+	intros V1 V2 E1 E2 G1 G2 x y H_V1x H_V2y.
+	(* idea: use the connected property to get a walk between any two points *)
+	(* cases on which sides the two points are on; use xy if needed *)
+Admitted.
+
+
+Lemma join_cycle_free :
+	forall {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Acyclic V1 E1) (G2 : Acyclic V2 E2) (u v : Vertex),
 	V_inter V1 V2 = V_empty -> V1 u -> V2 v -> Acyclic (V_union V1 V2) (A_union (E_set u v) (A_union E1 E2)).
 Proof. Admitted.
 
-Lemma join_trees {V1 V2 : V_set} {E1 E2 : A_set} (T1 : Tree V1 E1) (T2 : Tree V2 E2) (u v : Vertex) : 
+
+Lemma join_trees:
+	forall {V1 V2 : V_set} {E1 E2 : A_set} (T1 : Tree V1 E1) (T2 : Tree V2 E2) (u v : Vertex),
 	V_inter V1 V2 = V_empty -> V1 u -> V2 v -> Tree (V_union V1 V2) (A_union (E_set u v) (A_union E1 E2)).
 Proof.
 	intros.
