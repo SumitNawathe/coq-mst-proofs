@@ -47,21 +47,122 @@ Proof.
 	- subst. assumption.
 Qed.
 
-(* Exchange argument *)
 Lemma join_connected :
-	forall {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Connected V1 E1) (G2 : Connected V2 E2) (x y : Vertex),
-	V1 x -> V2 y -> Connected (V_union V1 V2) (A_union (E_set x y) (A_union E1 E2)).
+	forall {V1 V2 : V_set} {E1 E2 : A_set} (C1 : Connected V1 E1) (C2 : Connected V2 E2) (x y : Vertex),
+	V_inter V1 V2 = V_empty -> V1 x -> V2 y -> Connected (V_union V1 V2) (A_union (E_set x y) (A_union E1 E2)).
 Proof.
-	intros V1 V2 E1 E2 G1 G2 x y H_V1x H_V2y.
-	(* idea: use the connected_prop ^^ to get a walk between any two points *)
-	(* cases on which sides the two points are on; use xy if needed *)
-	(* use the axiom set_in_dec to do case analysis on which side each of the two points are *)
-	(* for instance, set_in_dec u V1 will get 2 cases, u \in V1 and u \not\in V1 *)
-	(* for the latter, use u in V_union V1 V2 to get u in V2 *)
-	(* 4 cases; 2 are easy by being in the same connected *)
-	(* for the other two, walk from one to x and the other two y, then join the walks *)
-	(* there is a Walk_append lemma somewhere already *)
-Admitted.
+	intros V1 V2 E1 E2 C1 C2 x y H_Vinter H_V1x H_V2y.
+	apply connected_prop.
+	- (* show that the (union vertices, union edges + xy edge) is a graph *)
+		apply G_edge.
+		+ specialize (Connected_Isa_Graph _ _ C1) as G1.
+			specialize (Connected_Isa_Graph _ _ C2) as G2.
+			apply (G_union _ _ _ _ G1 G2).
+		+ left. assumption.
+		+ right. assumption.
+		+ case (V_eq_dec x y); intros H_xy; try solve [assumption].
+			subst. exfalso.
+			assert (H_contra: V_inter V1 V2 <> V_empty). {
+				apply U_set_diff. exists y. split.
+				- split; assumption.
+				- intros H. inversion H.
+			}
+			contradiction.
+		+ intros H. unfold A_union in H. inversion H; subst.
+			* specialize (Connected_Isa_Graph _ _ C1) as G1.
+				specialize (G_ina_inv2 _ _ G1 _ _ H0) as H'.
+				assert (H_contra: V_inter V1 V2 <> V_empty). {
+					apply U_set_diff. exists y. split.
+					- split; assumption.
+					- intros Hb. inversion Hb.
+				}
+				contradiction.
+			* specialize (Connected_Isa_Graph _ _ C2) as G2.
+				specialize (G_ina_inv1 _ _ G2 _ _ H0) as H'.
+				assert (H_contra: V_inter V1 V2 <> V_empty). {
+					apply U_set_diff. exists x. split.
+					- split; assumption.
+					- intros Hb. inversion Hb.
+				}
+				contradiction.
+		+ intros H. unfold A_union in H. inversion H; subst.
+			* specialize (Connected_Isa_Graph _ _ C1) as G1.
+				specialize (G_ina_inv1 _ _ G1 _ _ H0) as H'.
+				assert (H_contra: V_inter V1 V2 <> V_empty). {
+					apply U_set_diff. exists y. split.
+					- split; assumption.
+					- intros Hb. inversion Hb.
+				}
+				contradiction.
+			* specialize (Connected_Isa_Graph _ _ C2) as G2.
+				specialize (G_ina_inv2 _ _ G2 _ _ H0) as H'.
+				assert (H_contra: V_inter V1 V2 <> V_empty). {
+					apply U_set_diff. exists x. split.
+					- split; assumption.
+					- intros Hb. inversion Hb.
+				}
+				contradiction.
+	- (* show that V1 ∪ V2 is nonempty; easy, since we have vertices in each *)
+		apply U_set_diff. exists x. split.
+		+ left. assumption.
+		+ intros H. inversion H.
+	- (* core of the argument: show that we can construct a path between any two vertices *)
+		intros p q Hp Hq.
+		(* first, show decideability for which half each point is in *)
+		assert (H_dec_V1_V2 : forall n, n ∈ (V1 ∪ V2) -> {V1 n} + {V2 n}). {
+			intros n H_Vn.
+			specialize (Connected_Isa_Graph _ _ C1) as G1.
+			specialize (Connected_Isa_Graph _ _ C2) as G2.
+			apply (Union_dec _ V1 V2 n (G_v_dec _ _ G1 n) (G_v_dec _ _ G2 n) H_Vn).
+		}
+		(* some useful statements for later *)
+		assert (H_V1_sub_union : V1 ⊆ (V1 ∪ V2)) by (intros a Ha; left; assumption).
+		assert (H_V2_sub_union : V2 ⊆ (V1 ∪ V2)) by (intros a Ha; right; assumption).
+		assert (H_E1_sub_big : E1 ⊆ E_set x y ∪ (E1 ∪ E2)) by (intros a Ha; right; left; assumption).
+		assert (H_E2_sub_big : E2 ⊆ E_set x y ∪ (E1 ∪ E2)) by (intros a Ha; right; right; assumption).
+		assert (H_x_in_union : x ∈ (V1 ∪ V2)) by (left; assumption).
+		assert (H_y_in_union : y ∈ (V1 ∪ V2)) by (right; assumption).
+		assert (H_xy_in_big : (x -- y) ∈ (E_set x y ∪ (E1 ∪ E2))) by (left; constructor).
+		assert (H_yx_in_big : (y -- x) ∈ (E_set x y ∪ (E1 ∪ E2))) by (left; constructor).
+		(* case analysis on the two vertices => 4 cases total *)
+		case (H_dec_V1_V2 p Hp); intros H_p; case (H_dec_V1_V2 q Hq); intros H_q.
+		+ (* both in V1 => path by C1 *)
+			destruct (Connected_walk _ _ C1 _ _ H_p H_q) as [vl [el walk]].
+			specialize (lift_walk H_V1_sub_union H_E1_sub_big walk) as walk'.
+			exists vl. exists el.
+			unfold V_union. unfold A_union. apply walk'.
+		+ (* p ∈ V1 and q ∈ V2 => construct q --> y -> x --> p *)
+			destruct (Connected_walk _ _ C2 _ _ H_V2y H_q) as [vl_yq [el_yq walk_yq]].
+			specialize (lift_walk H_V2_sub_union H_E2_sub_big walk_yq) as walk_yq'.
+			specialize (W_null V2 E2 y H_V2y) as walk_y.
+			specialize (lift_walk H_V2_sub_union H_E2_sub_big walk_y) as walk_y'.
+			specialize (W_step _ _ x y y _ _ walk_y' H_x_in_union H_xy_in_big) as walk_xy'.
+			destruct (Connected_walk _ _ C1 _ _ H_p H_V1x) as [vl_px [el_px walk_px]].
+			specialize (lift_walk H_V1_sub_union H_E1_sub_big walk_px) as walk_px'.
+			specialize (Walk_append _ _ _ _ _ _ _ _ _ walk_px' walk_xy') as walk_py'.
+			specialize (Walk_append _ _ _ _ _ _ _ _ _ walk_py' walk_yq') as walk_pq'.
+			exists ((vl_px ++ y::V_nil)++vl_yq).
+			exists ((el_px ++ (x~~y)::E_nil)++el_yq).
+			assumption.
+		+ (* q ∈ V1 and p ∈ V2 => construct q --> x -> y --> p *)
+			destruct (Connected_walk _ _ C1 _ _ H_V1x H_q) as [vl_xq [el_xq walk_xq]].
+			specialize (lift_walk H_V1_sub_union H_E1_sub_big walk_xq) as walk_xq'.
+			specialize (W_null V1 E1 x H_V1x) as walk_x.
+			specialize (lift_walk H_V1_sub_union H_E1_sub_big walk_x) as walk_x'.
+			specialize (W_step _ _ y x x _ _ walk_x' H_y_in_union H_yx_in_big) as walk_yx'.
+			destruct (Connected_walk _ _ C2 _ _ H_p H_V2y) as [vl_py [el_py walk_py]].
+			specialize (lift_walk H_V2_sub_union H_E2_sub_big walk_py) as walk_py'.
+			specialize (Walk_append _ _ _ _ _ _ _ _ _ walk_yx' walk_xq') as walk_yq'.
+			specialize (Walk_append _ _ _ _ _ _ _ _ _ walk_py' walk_yq') as walk_pq'.
+			exists (vl_py ++ (x::V_nil) ++ vl_xq).
+			exists (el_py ++ ((y~~x)::E_nil) ++ el_xq).
+			assumption.
+		+ (* both in V2 => path by C2 *)
+			destruct (Connected_walk _ _ C2 _ _ H_p H_q) as [vl [el walk]].
+			specialize (lift_walk H_V2_sub_union H_E2_sub_big walk) as walk'.
+			exists vl. exists el.
+			unfold V_union. unfold A_union. apply walk'.
+Qed.
 
 
 Lemma join_cycle_free :
@@ -78,7 +179,7 @@ Proof.
 
 	specialize (Tree_isa_connected _ _ T1) as C1.
 	specialize (Tree_isa_connected _ _ T2) as C2.
-	specialize (join_connected C1 C2 u v H0 H1) as C.
+	specialize (join_connected C1 C2 u v H H0 H1) as C.
 
 	specialize (Tree_isa_acyclic _ _ T1) as A1.
 	specialize (Tree_isa_acyclic _ _ T2) as A2.
