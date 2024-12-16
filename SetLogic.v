@@ -66,6 +66,14 @@ Proof.
 			[apply H_AB | apply H_BA]; assumption.
 Qed.
 
+Lemma union_included1 :
+	forall {T} {A B C : U_set T}, A ∪ B ⊆ C -> A ⊆ C.
+Proof. intros. intros a Ha. apply H. left. assumption. Qed.
+
+Lemma union_included2 :
+	forall {T} {A B C : U_set T}, A ∪ B ⊆ C -> B ⊆ C.
+Proof. intros. intros a Ha. apply H. right. assumption. Qed.
+
 
 
 (* Lemmas about Empty *)
@@ -83,6 +91,7 @@ Qed.
 Lemma not_empty_iff_exists :
 	forall T (A: U_set T), A <> ∅ -> {x : T & A x}.
 Proof. Admitted.
+(* This probably needs to be an axiom *)
 
 Remark union_single_without_means_empty :
 	forall T (V : U_set T) x, ⟨x⟩ ∪ V = ⟨x⟩ -> x ∉ V -> V = ∅.
@@ -110,6 +119,8 @@ Qed.
 Lemma not_empty_or_included :
 	forall {T} (A B : U_set T), B <> ∅ -> B ⊄ A -> {x & x ∈ B & x ∉ A}.
 Proof. Admitted.
+(* This is also probably an axiom, not sure its provable within the current system,
+but its true for finite sets *)
 
 Lemma subset_but_not_equal :
 	forall T (A B : U_set T), A ⊆ B -> A <> B -> {x & x ∈ B & x ∉ A}.
