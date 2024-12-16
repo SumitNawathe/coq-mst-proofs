@@ -315,6 +315,132 @@ Qed.
 
 
 
+Lemma find_first_crossing_edge_on_path :
+	forall {V E} (G: Graph V E) A x z vl el,
+	nontrivial_cut G A -> x ∈ A -> z ∉ A -> Path V E x z vl el ->
+	{u & {v & (edge_crossing_cut G A u v /\ In (u~~v) el) &
+	{vl1 & {el1 & {vl2 & {el2 &
+	{p1 : Path A E x u vl1 el1 & {p2 : Path V E v z vl2 el2 & vl = vl1 ++ v :: vl2 & el = el1 ++ (u~~v)::el2
+	}}}}}}}}.
+Proof.
+	intros V E G A x z vl. generalize dependent z. generalize dependent x.
+	induction vl as [|h t]; intros x z el H_A_nontrivial H_Ax H_nAz H_path.
+	{ inversion H_path; subst; try solve [contradiction]. }
+	case (set_in_dec h A); [intros H_Ah | intros H_nAh].
+	- (* h ∈ A -> cross in later part of walk *)
+		inversion H_path; subst.
+		specialize (IHt h z el0 H_A_nontrivial H_Ah H_nAz H1) as H.
+		inversion H as [u [v H_cross [vl1 [el1 [vl2 [el2 [p1 [p2 vl_prop el_prop]]]]]]]].
+		exists u. exists v.
+		+ destruct H_cross. split.
+			* assumption.
+			* apply in_cons. assumption.
+		+	exists (h::vl1). exists ((x ~~ h)::el1).
+			exists vl2. exists el2; try solve [simpl; f_equal; assumption].
+			assert (H_h_notin_vl1 : ~ In h vl1). {
+				intros H_h_vl1.
+				assert (H_h_in_t : In h t) by (subst; apply in_or_app; left; assumption).
+				contradiction.
+			}
+			assert (H_x_vl1_bad : In x vl1 -> x = u). {
+				intros H_x_vl1.
+				assert (H_x_in_t : In x t) by (subst; apply in_or_app; left; assumption).
+				apply H8 in H_x_in_t. subst.
+				contradiction.
+			}
+			assert (H_edges_bad : forall u, In u el1 -> ~ E_eq u (x~~h)). {
+				intros k Hk.
+				assert (H_k_in_el0 : In k el0) by (subst; apply in_or_app; left; assumption).
+				apply H10. assumption.
+			}
+			specialize (P_step A E x h u vl1 el1 p1 H_Ax H3 H4 H_h_notin_vl1 H_x_vl1_bad H_edges_bad) as P1.
+			exists P1. exists p2. simpl. f_equal. assumption. simpl. f_equal. assumption.
+	- (* h ∉ A -> x -- h is the cross *)
+		exists x. exists h.
+		+ split.
+			* constructor.
+				-- inversion H_path. assumption.
+				-- split; assumption.
+			* inversion H_path. left. reflexivity.
+
+		+ exists nil. exists nil.
+			inversion H_path; subst. exists t. exists el0. constructor.
+			* constructor. destruct H_A_nontrivial. apply H_Ax.
+			* exists H1. simpl. reflexivity. simpl. reflexivity.
+Qed.
+
+
+
+(* 
+Lemma Path_append :
+ forall V E (x y z : Vertex) (vl vl' : V_list) (el el' : E_list),
+ Path V E x y vl el -> Path V E y z vl' el' ->
+ (x = y -> vl = nil) -> (y = z -> vl' = nil) ->
+ (forall v, In v vl -> In v vl' -> False) ->
+ Path V E x z (vl ++ vl') (el ++ el').
+Proof.
+	intros V E x y z vl vl' el el' Hp; induction Hp eqn:P; simpl; intros; try solve [assumption].
+	apply P_step; try solve [assumption].
+	- apply (IHp p eq_refl).
+		+ assumption.
+		+ intros H_yz0. subst.
+			inversion p; subst; try solve [reflexivity].
+			exfalso.
+			assert (H_obv : (y::vl0) <> V_nil) by discriminate.
+			specialize (P_iny_vl _ _ _ _ _ _ p H_obv) as H'.
+			contradiction.
+		+ intros H_z0z. subst.
+			apply H1. reflexivity.
+		+ intros m Hm1 Hm2.
+			apply (H2 m).
+			* right. assumption.
+			* assumption.
+	- intros H'. apply in_app_or in H'. destruct H'.
+		+ contradiction.
+		+ apply (H2 y).
+			* left. reflexivity.
+			* assumption.
+	- intros H'. apply in_app_or in H'. destruct H'.
+		+ assert (Hx : In x vl) by assumption.
+			apply e in H3. subst.
+			assert (Hz0 : y = z0 \/ In z0 vl) by (right; assumption).
+			specialize (H2 z0). apply H2 in Hz0.
+			* destruct Hz0.
+			* assert (Hz0' : z0 = z0) by reflexivity.
+				apply H0 in Hz0'. discriminate.
+		+ case (V_in_dec x vl); intros H_xvl;
+				try solve [exfalso; apply (H2 x); [right; assumption | assumption]].
+			case (V_eq_dec x z0); intros H_xz0;
+				try solve [apply H0 in H_xz0; discriminate].
+			assert (H_obv : (y::vl) <> V_nil) by discriminate.
+			specialize (P_iny_vl _ _ _ _ _ _ Hp H_obv) as H'.
+			destruct H'.
+			* subst z0.
+				inversion p.
+				-- subst.
+Admitted.
+ *)
+
+(* 
+Lemma Path_reverse :
+ forall V E (x y : Vertex) (vl : V_list) (el : E_list),
+ Path V E x y vl el -> Path V E y x (cdr (rev (x :: vl))) (E_reverse el).
+Proof. Admitted.
+ *)
+
+Lemma diff_diff_incl :
+	forall T (A B : U_set T),
+	(A \ (A \ B)) ⊆ A.
+Proof.
+	intros. intros x Hx.
+	inversion Hx; subst. assumption.
+Qed.
+
+
+
+
+
+
 
 Lemma find_last_crossing_edge_on_path :
 	forall {V E} (G: Graph V E) A x z vl el,
