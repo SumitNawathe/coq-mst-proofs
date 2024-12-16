@@ -293,88 +293,145 @@ Proof.
 			* apply IHt. inversion H_nodup_l; assumption.
 Qed.
 
+Lemma eq_in_equiv :
+	forall {x y l}, E_eq x y -> E_in x l -> E_in y l.
+Proof.
+	intros x y l. induction l as [|h t]; intros H_eq H_in.
+	- inversion H_in.
+	- generalize dependent H_in.
+		unfold E_in. case (E_eq_dec x h); intros H_xh; fold E_in; intros H_in;
+		case (E_eq_dec y h); intros H_yh; fold E_in; try solve [constructor].
+		+ apply E_eq_sym in H_eq.
+			specialize (E_eq_trans H_eq H_xh) as H_yh'.
+			contradiction.
+		+ apply IHt; assumption.
+Qed.
+
+
 Lemma extract_from_enodup_list : 
 	forall (e : Edge) (l : list Edge), 
 	ENoDup l -> E_in e l -> exists (l' : list Edge), 
-	(forall (y : Edge), E_in y l -> (E_eq y e \/ E_in y l')) /\ ENoDup l'. 
+	(forall (y : Edge), E_in y l <-> (E_eq y e \/ E_in y l')) /\ ENoDup l' /\ ~ E_in e l'. 
 Proof.
 	intros e l. generalize dependent e.
 	induction l as [|h t]; intros e H_nodup_l H_e_in_l.
 	- exists nil. split.
-		+ intros y Hy. inversion Hy.
-		+ assumption.
+		+ intros y. split.
+			* intros Hy. inversion Hy.
+			* inversion H_e_in_l.
+		+ split; inversion H_e_in_l.
 	- simpl in H_e_in_l. generalize dependent H_e_in_l.
 		case (E_eq_dec e h); intros H_eh H_e_in_l.
 		+ exists (remove_edge e t). split.
-			* intros y Hy. simpl in Hy.
-				generalize dependent Hy.
-				case (E_eq_dec y h); intros H_yh Hyt.
-				-- 	apply E_eq_sym in H_yh.
-						left. apply E_eq_sym. apply (E_eq_trans H_eh H_yh).
-				-- 	right.
-						assert (H_ye : ~ E_eq y e). {
-							intros H_ye.
-							specialize (E_eq_trans H_ye H_eh) as H_yh'.
-							contradiction.
-						}
-						apply (subset_after_removing_except_removed _ _ _ Hyt H_ye).
-			* inversion H_nodup_l; subst.
-				apply remove_preserves_nodup; assumption.
+			* intros y. split.
+				-- 	intros Hy. simpl in Hy.
+						generalize dependent Hy.
+						case (E_eq_dec y h); intros H_yh Hyt.
+					++ 	apply E_eq_sym in H_yh.
+							left. apply E_eq_sym. apply (E_eq_trans H_eh H_yh).
+					++ 	right.
+							assert (H_ye : ~ E_eq y e). {
+								intros H_ye.
+								specialize (E_eq_trans H_ye H_eh) as H_yh'.
+								contradiction.
+							}
+							apply (subset_after_removing_except_removed _ _ _ Hyt H_ye).
+				-- 	intros Hy. destruct Hy as [Hy | Hy].
+					++	specialize (E_eq_trans Hy H_eh) as H_yh.
+							unfold E_in.
+							case (E_eq_dec y h); intros H_yh'; fold E_in; try solve [contradiction].
+							constructor.
+					++ 	unfold E_in. case (E_eq_dec y h); intros H_yh; fold E_in; try solve [constructor].
+							apply (in_after_removal Hy).
+			* inversion H_nodup_l; subst. split.
+				--  apply remove_preserves_nodup; assumption.
+				--  apply removed_edge_not_in_list.
 		+ exists (h::(remove_edge e t)). split.
-			* intros y Hy. simpl in Hy.
-				generalize dependent Hy. simpl.
-				case (E_eq_dec y h); intros H_yh Hyt.
-				-- 	right. assumption.
-				-- 	case (E_eq_dec y e); intros H_ye.
-					++ 	left. assumption.
-					++ 	right. apply (subset_after_removing_except_removed _ _ _ Hyt H_ye).
-			* constructor.
-				-- 	intros H_bad. apply (in_after_removal) in H_bad.
-						inversion H_nodup_l. contradiction.
-				-- 	inversion H_nodup_l. apply remove_preserves_nodup; assumption.
+			* intros y. split.
+				-- 	intros Hy. simpl in Hy.
+						generalize dependent Hy. simpl.
+						case (E_eq_dec y h); intros H_yh Hyt.
+						++ 	right. assumption.
+						++ 	case (E_eq_dec y e); intros H_ye.
+							** 	left. assumption.
+							** 	right. apply (subset_after_removing_except_removed _ _ _ Hyt H_ye).
+				--  intros Hy. destruct Hy.
+					++ 	simpl. case (E_eq_dec y h); intros H_yh; fold E_in; try solve [constructor].
+							apply E_eq_sym in H. apply (eq_in_equiv H H_e_in_l).
+					++  generalize dependent H.
+							unfold E_in. case (E_eq_dec y h); fold E_in; intros H_yh H; try solve [constructor].
+							apply (in_after_removal H).
+			* split.
+				-- 	constructor.
+					++ 	intros H_bad. apply (in_after_removal) in H_bad.
+							inversion H_nodup_l. contradiction.
+					++ 	inversion H_nodup_l. apply remove_preserves_nodup; assumption.
+				-- 	intros H. generalize dependent H.
+						unfold E_in. case (E_eq_dec e h); intros H_eh'; fold E_in; intros H; try solve [contradiction].
+						assert (H_contra : ~ E_in e (remove_edge e t)) by apply removed_edge_not_in_list.
+						contradiction.
 Qed.
+
+Lemma E_eq_flip :
+	forall x y u v, E_eq (x~~y) (u~~v) -> E_eq (y~~x) (u~~v).
+Proof.
+	intros x y u v H. inversion H; subst; constructor.
+Qed.
+
+Lemma Ein_sym :
+	forall x y l, E_in (x~~y) l -> E_in (y~~x) l.
+Proof.
+	intros x y. induction l as [|h t]; intros H.
+	- inversion H.
+	- destruct h as [u v].
+		generalize dependent H. unfold E_in.
+		case (E_eq_dec (x~~y) (u~~v)); fold E_in; intros Hdec H.
+		+ case (E_eq_dec (y~~x) (u~~v)); intros Hdec'.
+			* constructor.
+			* apply E_eq_flip in Hdec. contradiction.
+		+ case (E_eq_dec (y~~x) (u~~v)); intros Hdec'.
+			* constructor.
+			* apply IHt. assumption.
+Qed.
+
 
 Lemma edge_list_lemma : 
 	forall (l1 l2 : E_list) (w: (A_set -> nat)), 
 	ENoDup l1 -> ENoDup l2 -> 
 	(forall x, E_in x l1 -> E_in x l2) -> 
 	elist_weight l1 w <= elist_weight l2 w.
-Proof. 
-	intros l1. induction l1; intros. 
-
-	- simpl. lia. 
-	- simpl. 
-		inversion H; subst. 
-		assert (H_a_in_l2 : E_in a l2). {
-			apply H1. unfold E_in. case (E_eq_dec a a). 
-			+ intros. apply I. 
-			+ intros. specialize (E_refl a). intros. contradiction. 
+Proof.
+	intros l1. induction l1 as [|h t]; intros l2 w H_nodup_1 H_nodup_2 H_incl; try solve [simpl; lia].
+	assert (H_h_in_l2: E_in h l2). {
+		apply H_incl. simpl. case (E_eq_dec h h); intros H.
+		- constructor.
+		- exfalso. apply H.  constructor.
+	}
+	destruct (extract_from_enodup_list h l2 H_nodup_2 H_h_in_l2) as [l2' [l2'_prop l2'_nodup]].
+	destruct h as [x y]; subst.
+	assert (H' : w (E_set x y) + elist_weight l2' w = elist_weight l2 w) by admit.
+	simpl. rewrite <- H'. 
+	assert (Hq : forall x, E_in x t -> E_in x l2'). {
+		intros q Hq.
+		assert (H_q_in_l2 : E_in q (l2)). {
+			apply H_incl. unfold E_in. case (E_eq_dec q (x~~y)).
+		- intros. apply I. 
+		- intros. fold E_in. apply Hq.  
 		}
+		apply (l2'_prop q) in H_q_in_l2. destruct H_q_in_l2. 
+		- exfalso. inversion H; subst.
+			+ inversion H_nodup_1. contradiction.
+			+ inversion H_nodup_1. subst.
+				apply Ein_sym in Hq. contradiction.
+		- assumption.
+	}
+	inversion H_nodup_1; subst.
+	destruct l2'_nodup.
+	specialize (IHt l2' w H2 H Hq) as H_special.
+	lia.
+Admitted.
 
-		destruct (extract_from_enodup_list a l2 H0 H_a_in_l2) as [l2' [l2'_prop l2'_nodup]].
-  		destruct a eqn:H_a. subst.      
 
-		assert (H' : w (E_set v v0) + elist_weight l2' w = elist_weight l2 w). admit. 
-
-		rewrite <- H'. 
-
-		assert (Hx : forall x, E_in x l1 -> E_in x l2'). {
-            intros x Hx.
-
-            assert (H_x_in_l2 : E_in x (l2)). {
-                apply H1. unfold E_in. case (E_eq_dec x (v ~~ v0)).
-					- intros. apply I. 
-					- intros. fold E_in. apply Hx.  
-            }
-
-			apply (l2'_prop x) in H_x_in_l2. destruct H_x_in_l2. 
-			- subst. contradiction.
-			- apply H2. 
-        }
-
-		specialize (IHl1 l2' w H5 l2'_nodup Hx) as H_special. lia.
-
-Admitted.  
 
 Lemma tree_subset_weight_bound : 
 	forall {V V' E E'} (T : Tree V E) (T': Tree V' E') w,
