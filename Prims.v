@@ -25,7 +25,20 @@ Proof. Admitted.
 
 Lemma join_trees {V1 V2 : V_set} {E1 E2 : A_set} (T1 : Tree V1 E1) (T2 : Tree V2 E2) (u v : Vertex) : 
 	V_inter V1 V2 = V_empty -> V1 u -> V2 v -> Tree (V_union V1 V2) (A_union (E_set u v) (A_union E1 E2)).
-Proof. Admitted.
+Proof.
+	intros.
+
+	specialize (Tree_isa_connected _ _ T1) as C1.
+	specialize (Tree_isa_connected _ _ T2) as C2.
+	specialize (join_connected C1 C2 u v H0 H1) as C.
+
+	specialize (Tree_isa_acyclic _ _ T1) as A1.
+	specialize (Tree_isa_acyclic _ _ T2) as A2.
+	specialize (join_cycle_free A1 A2 u v H H0 H1) as A.
+
+	apply (Acyclic_connected_isa_tree _ _ A C).
+Qed.
+
 
 Lemma split_tree :
 	forall {V E} (T: Tree V E) x y, A_included (E_set x y) E ->
