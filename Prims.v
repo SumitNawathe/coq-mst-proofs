@@ -172,23 +172,154 @@ Proof.
 	- subst. specialize (IHT H_E_subset). intros. simpl in H. apply IHT with (e := e). apply H. 
 Qed. 
 
+(* A version of NoDup using E_in instead of In. *)
+Inductive ENoDup : list Edge -> Prop := 
+	| ENoDup_nil : ENoDup nil 
+	| ENoDup_cons : forall x El, ~ E_in x El -> ENoDup El -> ENoDup (x :: El). 
+
+(* the list of edges in a tree is distinct *)
+Lemma elist_no_dup : 
+	forall {V E} (T : Tree V E), 
+	ENoDup (TE_list T).
+Proof. intros. induction T. 
+	- simpl. constructor. 
+
+	- simpl. constructor. 
+	+ unfold not. intros. 
+
+	assert (H_nf_contra : E_in (n ~~ f) (TE_list T) -> v n /\ v f). 
+	{
+		split. 
+		- apply v0. 
+		- specialize (E_in_tree_iff_list n f T) as H_in_tree_iff. 
+		destruct H_in_tree_iff. 
+		apply H1 in H.
+		destruct H; 
+		specialize (Tree_isa_graph v a T) as H_t_is_g; 
+		specialize (G_ina_inv2 v a H_t_is_g n f) as H_nf_in_t;
+		specialize (G_non_directed v a H_t_is_g f n) as H_e_refl.
+			+ apply H_nf_in_t in H. apply H. 
+			+ apply H_e_refl in H. apply H_nf_in_t in H. contradiction. 
+	}
+	apply H_nf_contra in H. destruct H. contradiction. 
+	+ apply IHT. 
+	- simpl. apply IHT. 
+Qed. 
+
+(* Remove an edge from a list of edges *)
+Fixpoint remove_edge (e : Edge) (l : list Edge) : list Edge := 
+	match l with 
+	| nil => nil 
+	| x :: t => if E_eq_dec e x then remove_edge e t else x :: (remove_edge e t)
+	end. 
+
+(* If we have a edge list with no duplicates, an edge will not show up after being removed *)
+Lemma removed_edge_not_in_list : 
+    forall (e : Edge) (l : list Edge), 
+    ~ E_in e (remove_edge e l).
+Proof.
+    intros e l. generalize dependent e.
+    induction l as [|h T]; intros e H.
+    - inversion H.
+    - simpl in H. generalize dependent H.
+        case (E_eq_dec e h); intros H_eh H.
+        + subst. apply (IHT e). assumption.
+        + simpl in H. generalize dependent H.
+            case (E_eq_dec e h); intros H_eh' H.
+            * contradiction.
+            * apply (IHT e). assumption.
+Qed.
+
+Lemma extract_from_enodup_list : 
+	forall (e : Edge) (l : list Edge), 
+	ENoDup l -> E_in e l -> exists (l' : list Edge), 
+	(forall (y : Edge), E_in y l -> (y = e \/ E_in y l')) /\ ENoDup l'. 
+Proof. 
+
+	(* the y = e case -> ~E_in y l'*)
+	intros. exists (remove_edge e l). split.  
+	- unfold E_in. 
+
+	Admitted. 
+(*
+	intros. generalize dependent e. induction l.  
+	(* e is in an empty list, contra *)
+	- intros. unfold E_in in H0. contradiction. 
+	- inversion H; subst. intros. 
+
+	specialize (IHl H3).
+
+	(* get all edges besides e *)
+	exists (remove_edge (e) (l)). split. 
+		+  intros. unfold iff. split. 
+			* admit. 
+			* intros. destruct H1. 
+				-- rewrite <- H1 in H0. apply H0. 
+				-- unfold E_in in H1. generalize dependent H1. case (E_eq_dec y a); fold E_in. 
+					++ 
+					++ intros. fold E_in. unfold  
+
+Admitted. 
+*)
+
+Lemma edge_list_lemma : 
+	forall (l1 l2 : E_list) (w: (A_set -> nat)), 
+	ENoDup l1 -> ENoDup l2 -> 
+	(forall x, E_in x l1 -> E_in x l2) -> 
+	elist_weight l1 w <= elist_weight l2 w.
+Proof. 
+	intros l1. induction l1; intros. 
+
+	- simpl. lia. 
+	- simpl. 
+		inversion H; subst. 
+		assert (H_a_in_l2 : E_in a l2). {
+			apply H1. unfold E_in. case (E_eq_dec a a). 
+			+ intros. apply I. 
+			+ intros. specialize (E_refl a). intros. contradiction. 
+		}
+
+		destruct (extract_from_enodup_list a l2 H0 H_a_in_l2) as [l2' [l2'_prop l2'_nodup]].
+  		destruct a eqn:H_a. subst.      
+
+		assert (H' : w (E_set v v0) + elist_weight l2' w = elist_weight l2 w). admit. 
+
+		rewrite <- H'. 
+
+		assert (Hx : forall x, E_in x l1 -> E_in x l2'). {
+            intros x Hx.
+
+            assert (H_x_in_l2 : E_in x (l2)). {
+                apply H1. unfold E_in. case (E_eq_dec x (v ~~ v0)).
+					- intros. apply I. 
+					- intros. fold E_in. apply Hx.  
+            }
+
+			apply (l2'_prop x) in H_x_in_l2. destruct H_x_in_l2. 
+			- subst. contradiction.
+			- apply H2. 
+        }
+
+		specialize (IHl1 l2' w H5 l2'_nodup Hx) as H_special. lia.
+
+Admitted.  
+
 Lemma tree_subset_weight_bound : 
 	forall {V V' E E'} (T : Tree V E) (T': Tree V' E') w,
 	A_included E E' -> st_weight T w <= st_weight T' w.
 Proof.
 	intros. specialize (tree_edge_subset_implies_list_subset T T') as H_elist_subset.
-
 	specialize (H_elist_subset H).
-
-	assert (H_elist_weight_bound : elist_weight (TE_list T) w <= elist_weight (TE_list T') w). admit. 
-
+	specialize (elist_no_dup T) as H_nodup_t.
+	specialize (elist_no_dup T') as H_nodup_t'. 
+	specialize (edge_list_lemma (TE_list T) (TE_list T') w H_nodup_t H_nodup_t') as H_Elist_lemma.
+	specialize (H_Elist_lemma H_elist_subset). 
+	
 	rewrite -> st_weight_elist_weight_equiv. 
 	rewrite -> st_weight_elist_weight_equiv.
-	apply H_elist_weight_bound. 
 
-	Admitted.
-	
-
+	apply H_Elist_lemma. 
+Qed. 
 
 Lemma split_tree_weight_lemma :
 	forall {V1 E1 V2 E2 x y}
@@ -262,54 +393,6 @@ Proof.
 		contradiction.
 	- apply IHT. subst. reflexivity.
 Qed.
-
-
-(* 
-Fixpoint sum_list (l : list nat) : nat :=
-	match l with
-	| nil => 0
-	| h :: t => h + sum_list t
-	end.
-
-Lemma extract_from_nodup_list :
-	forall T (x: T) (l: list T),
-	NoDup l -> In x l ->
-	exists (l': list T),
-	(forall (y: T), In y l <-> (y = x \/ In y l')) /\ NoDup l'.
-Proof. Admitted.
-
-Lemma nat_list_lemma :
-	forall l1 l2,
-	NoDup l1 -> NoDup l2 ->
-	(forall x, In x l1 -> In x l2) ->
-	sum_list l1 <= sum_list l2.
-Proof.
-	intros l1. induction l1; intros.
-	- simpl. lia.
-	- simpl.
-		inversion H; subst.
-		assert (H_a_in_l2 : In a l2). {
-			apply H1. left. reflexivity.
-		}
-		destruct (extract_from_nodup_list _ a l2 H0 H_a_in_l2) as [l2' [l2'_prop l2'_nodup]].
-		assert (H' : a + sum_list l2' = sum_list l2) by admit.
-		rewrite <- H'.
-		assert (Hx : forall x, In x l1 -> In x l2'). {
-			intros x Hx.
-			assert (H_x_in_l2 : In x l2). {
-				apply H1. right. assumption.
-			}
-			apply (l2'_prop x) in H_x_in_l2. destruct H_x_in_l2.
-			- subst. contradiction.
-			- assumption.
-		}
-		specialize (IHl1 l2' H5 l2'_nodup Hx). lia.
-Admitted.
- *)
-
-
-
-
 
 Theorem light_edge_is_safe :
 	forall {V E} (G: Graph V E) (C: Connected V E) {V' E'} (T : Tree V' E') x y w,
@@ -596,9 +679,3 @@ specialize (H0 E_T' T' H1) as H_MST_weight.
 specialize (tree_subset_weight_bound T MST w) as H_T_weight_bound. 
 apply H_T_weight_bound in E'_incl. lia. 
 Qed.
-
-
-
-
-
-
