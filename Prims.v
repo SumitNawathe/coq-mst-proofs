@@ -9,14 +9,10 @@ Require Export MST.CustomNotations.
 Require Export MST.OrderSizeLemmas. 
 Require Export MST.CycleLemmas.
 Require Export MST.Weights.
+Require Export MST.ImprovedPaths.
 
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
 	is_spanning_tree T G /\ forall E_T' (T': Tree V E_T'), is_spanning_tree T' G -> st_weight T f <= st_weight T' f.
-
-(* Definition edge_crossing_cut {V : V_set} {E : A_set} (G : Graph V E) (A : V_set) (x y: Vertex) : Prop :=
-	nontrivial_cut G A -> E (A_ends x y) /\ A x /\ ~ A y. *)
-
-(* Definition prim_invar1 {V E} (G : Graph V E) {V' E'} (T : Tree V' E') w *)
 
 (* Exchange argument *)
 Lemma join_connected {V1 V2 : V_set} {E1 E2 : A_set} (G1 : Connected V1 E1) (G2 : Connected V2 E2) (x y : Vertex):
@@ -47,17 +43,6 @@ Definition is_subset_MST {V V_T: V_set} {E E_T: A_set} (w : A_set -> nat)
 	{E_MST : A_set & {MST : Tree V E_MST & 
 	is_MST w MST G /\ A_included E_T E_MST /\ V_included V_T V}}.
 
-Lemma lift_walk :
-	forall {V E x y vl el V' E'}, V ⊆ V' -> E ⊆ E' -> Walk V E x y vl el -> Walk V' E' x y vl el.
-Proof.
-	intros. induction H1.
-	- constructor. apply H. assumption.
-	- constructor.
-		+ assumption.
-		+ apply H. assumption.
-		+ apply H0. assumption.
-Qed.
-
 Lemma tree_Vempty_contra : 
 	forall {V E} (T: Tree V E), V = V_empty -> False.
 Proof.
@@ -78,42 +63,6 @@ Proof.
 		contradiction.
 	- apply IHT. subst. reflexivity.
 Qed.
-
-
-
-Lemma P_inel_inv1 :
-	forall V E (x y : Vertex) (vl : V_list) (el : E_list),
-	Path V E x y vl el ->
-	forall x' y' : Vertex, In (E_ends x' y') el -> V x'.
-Proof.
-	intros V E x y vl el p; elim p; intros.
-	inversion H.
-
-	inversion H0.
-	inversion H1.
-	subst.
-	assumption.
-	apply (H _ y'). assumption.
-Qed.
-
-
-Lemma P_inel_inv2 :
-	forall V E (x y : Vertex) (vl : V_list) (el : E_list),
-	Path V E x y vl el ->
-	forall x' y' : Vertex, In (E_ends x' y') el -> V y'.
-Proof.
-	intros V E x y vl el p; elim p; intros.
-	inversion H.
-
-	inversion H0.
-	inversion H1.
-	subst.
-	clear H1. clear H0.
-	inversion p0; subst; try solve [assumption].
-	apply (H x' _). assumption.
-Qed.
-
-
 
 
 
