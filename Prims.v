@@ -213,20 +213,20 @@ Proof.
 	unfold A_union in *; unfold A_included in *.
 	(* some useful lemmas about the split *)
 	assert (H_notV1_V2 : forall n, V n -> ~ V1 n -> V2 n). {
-		intros n H_Vn H_not_V1n. apply pbc; intros H_not_V2n.
-		assert (H_contra : V1 ∪ V2 <> V). {
-			apply U_set_diff_commut. apply U_set_diff. exists n. split; try solve [assumption].
-			intros H. inversion H; contradiction.
-		}
-		contradiction.
+		intros n H_Vn H_not_V1n.
+		specialize (Tree_isa_graph _ _ T1) as G1.
+		specialize (Tree_isa_graph _ _ T2) as G2.
+		rewrite <- H_V1V2_cup in H_Vn.
+		specialize (Union_dec _ V1 V2 n (G_v_dec _ _ G1 n) (G_v_dec _ _ G2 n) H_Vn) as H'.
+		destruct H'; solve [contradiction | assumption].
 	}
 	assert (H_notV2_V1 : forall n, V n -> ~ V2 n -> V1 n). {
-		intros n HVn H_not_V2n. apply pbc; intros H_not_V1n.
-		assert (H_contra : V1 ∪ V2 <> V). {
-			apply U_set_diff_commut. apply U_set_diff. exists n. split; try solve [assumption].
-			intros H. inversion H; contradiction.
-		}
-		contradiction.
+		intros n H_Vn H_not_V1n.
+		specialize (Tree_isa_graph _ _ T1) as G1.
+		specialize (Tree_isa_graph _ _ T2) as G2.
+		rewrite <- H_V1V2_cup in H_Vn.
+		specialize (Union_dec _ V1 V2 n (G_v_dec _ _ G1 n) (G_v_dec _ _ G2 n) H_Vn) as H'.
+		destruct H'; solve [assumption | contradiction].
 	}
 	assert (H_V1V2_sub_V : V1 ∪ V2 ⊆ V) by (subst; apply self_inclusion).
 	(* must show that x and y lie on either side of the split *)

@@ -2,7 +2,6 @@ Require Export MST.Trees.
 Require Export MST.Connected.
 Require Export MST.Sets.
 Require Export MST.CustomNotations.
-Require Export MST.Logic.
 Require Export MST.SetLogic.
 Require Export MST.Cuts.
 

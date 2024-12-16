@@ -1,6 +1,22 @@
 Require Export MST.Sets.
 Require Export MST.CustomNotations.
-Require Export MST.Logic.
+
+
+Require Import Coq.Logic.Classical_Prop.
+Require Import Coq.Logic.Classical_Pred_Type.
+Require Import Coq.Logic.Decidable.
+
+(* Decideability and proof by contradiction *)
+
+Axiom decideability : forall P, decidable P.
+
+Lemma pbc : forall P, (~P -> False) -> P.
+Proof.
+	intros. destruct (decideability P); solve [assumption | contradiction].
+Qed.
+
+
+
 
 
 (* Strong decideability for sets *)
@@ -22,18 +38,6 @@ Lemma not_Single_not_equal :
 Proof.
 	intros. unfold not; intros H_xy.
 	rewrite H_xy in H. apply H. constructor.
-Qed.
-
-Lemma negate_implication_sets :
-	forall T (P Q: T -> Prop), ~ (forall x, P x -> Q x) <-> (exists x, P x /\ ~ Q x).
-Proof.
-	intros. split; intros H.
-	- apply (pbc (exists x : T, P x /\ ~ Q x)); intros H'.
-		apply H; intros x H_Px. specialize H'.
-		apply (pbc (Q x)); intros HQ.
-		apply H'. exists x. split; assumption.
-	- intros H'. destruct H as [x [HP HnQ]].
-		apply H' in HP. contradiction.
 Qed.
 
 
@@ -92,17 +96,6 @@ Lemma not_empty_iff_exists :
 	forall T (A: U_set T), A <> ∅ -> {x : T & A x}.
 Proof. Admitted.
 (* This probably needs to be an axiom *)
-
-Remark union_single_without_means_empty :
-	forall T (V : U_set T) x, ⟨x⟩ ∪ V = ⟨x⟩ -> x ∉ V -> V = ∅.
-Proof.
-	intros T V x H1 H2.
-	apply empty_iff_not_exists. intros [y Hy].
-	case (decideability (x = y)); intros Hxy.
-	- subst. contradiction.
-	- assert (Hxv : y ∈ (⟨x⟩ ∪ V)) by (constructor 2; assumption).
-		rewrite H1 in Hxv. inversion Hxv. contradiction.
-Qed.
 
 Lemma single_union_empty :
 	forall T (x : T), ⟨x⟩ ∪ ∅ = ⟨x⟩.

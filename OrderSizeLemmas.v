@@ -2,7 +2,6 @@ Require Export MST.Trees.
 Require Export MST.Connected.
 Require Export MST.Sets.
 Require Export MST.CustomNotations.
-Require Export MST.Logic.
 Require Export MST.SetLogic.
 
 Open Scope uset_scope.
@@ -293,34 +292,6 @@ Proof.
 		contradiction.
 	- unfold G_order. unfold GV_list; fold GV_list.
 		apply IHG; reflexivity.
-Qed.
-
-Remark order_singleton_graph :
-	forall r A (G : Graph ⟨r⟩ A), G_order ⟨r⟩ A G = 1.
-Proof.
-	intros. remember ⟨r⟩ as V. generalize dependent r. induction G; intros.
-	- exfalso.
-		assert (nHeqV : V_empty <> ⟨r⟩). {
-			apply U_set_diff_commut. apply U_set_diff. exists r.
-			split. - constructor. - intros H. inversion H.
-		}
-		contradiction.
-	- assert (H_rx : r = x). {
-			assert (H_x : x ∈ (⟨x⟩ ∪ v)) by repeat constructor.
-			unfold V_union in HeqV. unfold V_single in HeqV.
-			rewrite HeqV in H_x. inversion H_x. reflexivity.
-		}
-		subst. unfold G_order. unfold GV_list; fold GV_list. simpl. apply f_equal.
-		unfold V_union in *. unfold V_single in *.
-		assert (H_v : v = ∅) by (apply (union_single_without_means_empty _ v x); assumption). subst.
-		assert (H_a : a = ∅). {
-			eapply G_empty_empty.
-			- apply G.
-			- reflexivity.
-		}
-		subst. apply order_empty_graph.
-	- subst. unfold G_order. unfold GV_list; fold GV_list. simpl. apply (IHG r). reflexivity.
-	- subst. unfold G_order. unfold GV_list; fold GV_list. simpl. apply (IHG r). reflexivity.
 Qed.
 
 Lemma graph_order_add_vert :
