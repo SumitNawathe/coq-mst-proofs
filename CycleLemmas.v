@@ -98,7 +98,7 @@ Admitted.
 
 
 
-
+(* 
 
 Lemma path_uniq_in_acyclic :
 	forall V E (G : Acyclic V E) p q vl1 el1 vl2 el2,
@@ -150,7 +150,7 @@ Admitted.
 						(* specialize (P_step V E p y2 p (y2::vl3) ((p~~y2)::el3) p3) as p_p_p. *)
 						(* p -> y1 --> y2 --> p is a cycle *)
 Abort.
-
+ *)
 
 
 
