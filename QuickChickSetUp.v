@@ -1,4 +1,3 @@
-
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Import ListNotations.
@@ -7,6 +6,15 @@ Require Import Coq.Arith.PeanoNat.
 
 Require Export MST.Digraphs.
 Require Export MST.Graphs.
+
+Require Import Coq.Strings.Ascii.
+From QuickChick Require Import QuickChick.
+Require Import MST.MST.
+Require Import MST.Graphs.
+Require Import MST.Edges.
+Require Import MST.Vertices.
+Require Import MST.Trees.
+Require Import MST.Connected.
 
 (* Playing aroudn with Graphs for our reference -- disregard this section *)
 Definition vertex0 := index 0. 
@@ -120,8 +128,53 @@ Compute (show listy2).
 Check graph_v0. 
 Compute (show graph_v0). 
 
-(* Generator Code is buggy and doesn't work, hence nothing is included down below *)
+(* Generator Code *)
 
+(******* GRAPH GENERATOR *******)
+
+Instance GenVertex : Gen Vertex :=
+{
+  arbitrary := bindGen (choose (0, 100)) (fun n => ret (index n))
+}.
+
+Instance ShrinkVertex : Shrink Vertex :=
+{
+  shrink := fun v => match v with
+                     | index n => if Nat.eqb n 0 then [] else [index (n - 1)]
+                     end
+}.
+
+Instance GenVSet : Gen V_set :=
+{
+  arbitrary := 
+    bindGen GenVertex.(arbitrary) (fun v1 =>
+    bindGen GenVertex.(arbitrary) (fun v2 =>
+    returnGen (V_union (V_single v1) (V_single v2))))
+}.
+
+Instance GenASet : Gen A_set :=
+{
+  arbitrary := 
+    bindGen GenVertex.(arbitrary) (fun v1 =>
+    bindGen GenVertex.(arbitrary) (fun v2 =>
+    returnGen (A_union (A_empty) (E_set v1 v2))))
+}.
+
+Definition genGraph (n : nat) : G (V_set * A_set) :=
+  match n with
+  | O => 
+    bindGen GenVSet.(arbitrary) (fun v =>
+    bindGen GenASet.(arbitrary) (fun a =>
+    returnGen (v, a)))
+  | S n' =>
+    bindGen GenVSet.(arbitrary) (fun v =>
+    bindGen GenASet.(arbitrary) (fun a =>
+    returnGen (v, a)))
+  end.
+
+Definition genGraph' := genGraph 10.
+
+Compute (show genGraph').
 
 
 
