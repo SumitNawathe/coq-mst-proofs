@@ -11,6 +11,18 @@ Require Export MST.CycleLemmas.
 Require Export MST.Weights.
 Require Export MST.ImprovedPaths.
 
+
+Lemma V_extract_not_in :
+	forall x vl, ~ In x (V_extract x vl).
+Proof.
+	intros x vl. generalize dependent x. induction vl as [|h t]; intros x H.
+	- inversion H.
+	- simpl in H.
+		case (V_in_dec x t) as [H_xt | H_xt]; specialize (IHt x); contradiction.
+Qed.
+
+
+
 Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T) (G : Graph V E) :=
 	is_spanning_tree T G /\ forall E_T' (T': Tree V E_T'), is_spanning_tree T' G -> st_weight T f <= st_weight T' f.
 
@@ -212,31 +224,27 @@ Proof.
 			[V1 [V2 [E1 [E2 [T1 [T2 [H_V1V2_cap [H_V1V2_cup [H_VE1E2 [H_V1_u H_V2_v]]]]]]]]]].
 	unfold A_union in *; unfold A_included in *.
 	(* some useful lemmas about the split *)
-	assert (H_notV1_V2 : forall n, V n -> ~ V1 n -> V2 n). {
-		intros n H_Vn H_not_V1n.
+	assert (H_dec_V1_V2 : forall n, n ∈ V -> {V1 n} + {V2 n}). {
+		intros n H_Vn.
 		specialize (Tree_isa_graph _ _ T1) as G1.
 		specialize (Tree_isa_graph _ _ T2) as G2.
 		rewrite <- H_V1V2_cup in H_Vn.
-		specialize (Union_dec _ V1 V2 n (G_v_dec _ _ G1 n) (G_v_dec _ _ G2 n) H_Vn) as H'.
-		destruct H'; solve [contradiction | assumption].
+		apply (Union_dec _ V1 V2 n (G_v_dec _ _ G1 n) (G_v_dec _ _ G2 n) H_Vn).
+	}
+	assert (H_notV1_V2 : forall n, V n -> ~ V1 n -> V2 n). {
+		intros n H_Vn H_not_V1n.
+		destruct (H_dec_V1_V2 n H_Vn); solve [contradiction | assumption].
 	}
 	assert (H_notV2_V1 : forall n, V n -> ~ V2 n -> V1 n). {
 		intros n H_Vn H_not_V1n.
-		specialize (Tree_isa_graph _ _ T1) as G1.
-		specialize (Tree_isa_graph _ _ T2) as G2.
-		rewrite <- H_V1V2_cup in H_Vn.
-		specialize (Union_dec _ V1 V2 n (G_v_dec _ _ G1 n) (G_v_dec _ _ G2 n) H_Vn) as H'.
-		destruct H'; solve [assumption | contradiction].
+		destruct (H_dec_V1_V2 n H_Vn); solve [assumption | contradiction].
 	}
 	assert (H_V1V2_sub_V : V1 ∪ V2 ⊆ V) by (subst; apply self_inclusion).
 	(* must show that x and y lie on either side of the split *)
 	assert (H_V1_x : x ∈ V1). {
 		case (V_eq_dec x u); intros H_xu.
 		{ subst; assumption. }
-		apply pbc; intros H_nV1_x.
-		assert (H_V2_x : x ∈ V2). {
-			apply H_notV1_V2; [apply H_V'_sub_V; assumption | assumption].
-		}
+		destruct (H_dec_V1_V2 x H_Vx) as [H_V1_x' | H_V2_x]; try solve [assumption].
 		(* walk from v --> x *)
 		specialize (Tree_isa_connected _ _ T2) as C2.
 		destruct (Connected_walk _ _ C2 x v H_V2_x H_V2_v) as [wvl_xv [wel_xv walk_xv]].
@@ -322,12 +330,7 @@ Proof.
 	assert (H_V2_y : y ∈ V2). {
 		case (V_eq_dec y v); intros H_yv.
 		{ subst; assumption. }
-		apply pbc; intros H_nV2_y.
-		assert (H_V1_y : y ∈ V1). {
-			apply H_notV2_V1.
-			- apply (G_ina_inv2 _ _ G _ _ H_EMST_xy).
-			- assumption.
-		}
+		destruct (H_dec_V1_V2 y H_Vy) as [H_V1_y | H_V2_y']; try solve [assumption].
 		(* walk from u --> y *)
 		specialize (Tree_isa_connected _ _ T1) as C1.
 		destruct (Connected_walk _ _ C1 y u H_V1_y H_V1_u) as [wvl_yu [wel_yu walk_yu]].

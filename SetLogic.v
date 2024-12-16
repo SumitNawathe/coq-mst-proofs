@@ -2,22 +2,6 @@ Require Export MST.Sets.
 Require Export MST.CustomNotations.
 
 
-Require Import Coq.Logic.Classical_Prop.
-Require Import Coq.Logic.Classical_Pred_Type.
-Require Import Coq.Logic.Decidable.
-
-(* Decideability and proof by contradiction *)
-
-Axiom decideability : forall P, decidable P.
-
-Lemma pbc : forall P, (~P -> False) -> P.
-Proof.
-	intros. destruct (decideability P); solve [assumption | contradiction].
-Qed.
-
-
-
-
 
 (* Strong decideability for sets *)
 (* 
@@ -27,9 +11,11 @@ We are mainly working with sets of vertices and edges; for both of those, equali
 Thus, the following relations on finite sets should be decideable
 *)
 
-Axiom set_eq_dec : forall {T} (A B : U_set T), {A = B} + {A <> B}.
-Axiom set_subset_dec : forall {T} (A B : U_set T), {A ⊆ B} + {A ⊄ B}.
+(* This axiom is primarily used exclusively Cuts.v *)
 Axiom set_in_dec : forall {T} (x : T) (A : U_set T), {x ∈ A} + {x ∉ A}.
+(* The following two are used once, in subset_but_not_equal in this file *)
+Axiom set_subset_dec : forall {T} (A B : U_set T), {A ⊆ B} + {A ⊄ B}.
+Axiom set_eq_dec : forall {T} (A B : U_set T), {A = B} + {A <> B}.
 
 (* Utlities *)
 
@@ -39,7 +25,6 @@ Proof.
 	intros. unfold not; intros H_xy.
 	rewrite H_xy in H. apply H. constructor.
 Qed.
-
 
 
 (* Lemmas about inclusion *)
@@ -95,7 +80,6 @@ Qed.
 Lemma not_empty_iff_exists :
 	forall T (A: U_set T), A <> ∅ -> {x : T & A x}.
 Proof. Admitted.
-(* This probably needs to be an axiom *)
 
 Lemma single_union_empty :
 	forall T (x : T), ⟨x⟩ ∪ ∅ = ⟨x⟩.
