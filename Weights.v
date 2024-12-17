@@ -394,30 +394,8 @@ Lemma split_tree_weight_lemma :
 	forall {V1 E1 V2 E2 x y}
 	(T: Tree (V1 ∪ V2) (E_set x y ∪ (E1 ∪ E2))) (T1 : Tree V1 E1) (T2: Tree V2 E2) w,
 	x ∈ V1 -> y ∈ V2 -> V1 ∩ V2 = ∅ -> st_weight T w = st_weight T1 w + st_weight T2 w + w (E_set x y).
-Proof.
-	intros V1 E1 V2 E2 x y T T1 T2 w H_V1x H_V2y H_V1V2.
-	remember (V1 ∪ V2) as V. remember (E_set x y ∪ (E1 ∪ E2)) as E.
-	generalize dependent T2. generalize dependent E2. generalize dependent V2.
-	generalize dependent T1. generalize dependent E1. generalize dependent V1.
-	generalize dependent y. generalize dependent x.
-	induction T; intros.
-	- assert (HeqE' : A_empty <> E_set x y ∪ (E1 ∪ E2)). {
-			apply U_set_diff_commut. apply U_set_diff.
-			exists (x -- y). split; [repeat constructor | intros H; inversion H].
-		}
-		contradiction.
-	- simpl. unfold V_union in *; unfold A_union in *.
-		assert (Hn : n ∈ (V1 ∪ V2)) by admit.
-		assert (Hf : f ∈ (V1 ∪ V2)) by admit.
-
-		(* case (E_set n f) = (E_set x y). *)
-		(* n and f are in V1 and V2 (or reverse) *)
-		(* -> (n--f) not in E1 or E2 -> E1 ∪ E2 = a -> ok *)
-
-		(* case (E_set n f) <> (E_set x y) *)
-		(* case (n -- f) in E1 -> n and f in V1 *)
-		(* ... why is this a contradiction? its not? *)
-Admitted.
+Proof. Admitted.
+(* This proof should follow pretty easily from split_tree *)
 
 
 Lemma split_tree_weight_lemma' :

@@ -27,12 +27,6 @@ Definition is_MST (f : A_set -> nat) {V : V_set} {E E_T : A_set} (T : Tree V E_T
 	is_spanning_tree T G /\ forall E_T' (T': Tree V E_T'), is_spanning_tree T' G -> st_weight T f <= st_weight T' f.
 
 
-Theorem connected_prop :
-	forall {V E} (G: Graph V E), V <> ∅ ->
-	(forall x y, x ∈ V -> y ∈ V -> {vl : V_list &  {el : E_list &  Walk V E x y vl el}}) ->
-	Connected V E.
-Proof. Admitted.
-
 Theorem connected_vert_not_empty :
 	forall {V E} (G: Connected V E), V <> ∅.
 Proof.
@@ -46,6 +40,13 @@ Proof.
 	- assumption.
 	- subst. assumption.
 Qed.
+
+
+Theorem connected_prop :
+	forall {V E} (G: Graph V E), V <> V_empty ->
+	(forall x y, V x -> V y -> {vl : V_list &  {el : E_list &  Walk V E x y vl el}}) ->
+	Connected V E.
+Proof. Admitted.
 
 Lemma join_connected :
 	forall {V1 V2 : V_set} {E1 E2 : A_set} (C1 : Connected V1 E1) (C2 : Connected V2 E2) (x y : Vertex),

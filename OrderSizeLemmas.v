@@ -6,6 +6,31 @@ Require Export MST.SetLogic.
 
 Open Scope uset_scope.
 
+(* Utility *)
+
+Lemma being_part_of_graph_means_enumerable :
+	forall V E (G : Graph V E), V_enumerable V.
+Proof.
+	intros. induction G.
+	- unfold V_enumerable. unfold U_enumerable.
+		apply exist with (x := nil). intros x H. inversion H.
+	- inversion IHG as [vl Hvl].
+		exists (x::vl). intros y Hy.
+		case (V_eq_dec y x); intros H_xy.
+		+ rewrite H_xy. unfold In; left; reflexivity.
+		+ assert (H_Vy : v y). {
+				unfold V_union in Hy. destruct Hy; subst.
+				- inversion H; subst; clear H. contradiction.
+				- assumption.
+			}
+			 apply (Hvl y) in H_Vy.
+			 unfold In; right. apply H_Vy.
+	- assumption.
+	- subst; assumption.
+Qed.
+
+
+
 
 (* Graph vertex list *)
 

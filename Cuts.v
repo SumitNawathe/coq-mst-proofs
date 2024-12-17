@@ -11,35 +11,6 @@ Require Export MST.SetLogic.
 Open Scope uset_scope.
 
 
-(* Useful theorems on sets *)
-
-Lemma subset_empty_is_empty : forall {T} (A: U_set T), A ⊆ ∅ -> A = ∅.
-Proof.
-	intros T A H_AT. apply U_set_eq. intros x; split; intros H; [auto | inversion H].
-Qed.
-
-Lemma self_inclusion : forall T (A : U_set T), A ⊆ A.
-Proof. intros. unfold Included. auto. Qed.
-
-Lemma set_minus_point_still_included :
-	forall T (A : U_set T) (x : T), (A\⟨x⟩) ⊆ A.
-Proof.
-	intros. unfold Included. intros y H_differ.
-	inversion H_differ; subst; clear H_differ. assumption.
-Qed.
-
-Lemma included_trans :
-	forall T (A B C: U_set T), A ⊆ B -> B ⊆ C -> A ⊆ C.
-Proof. intros T A B C H_AB H_BC. unfold Included. intros. auto. Qed.
-
-Lemma not_Single_not_equal :
-	forall (T : Set) (x y : T), y ∉ ⟨x⟩ -> x <> y.
-Proof.
-	intros. unfold not; intros H_xy.
-	rewrite H_xy in H. apply H. constructor.
-Qed.
-
-
 
 (* Subgraph/subtree definitions *)
 
@@ -66,31 +37,6 @@ Definition is_spanning {V V' : V_set} {E E' : A_set} (G' : Graph V' E') (G : Gra
 
 Definition is_spanning_tree {V V' : V_set} {E E' : A_set} (T : Tree V' E') (G : Graph V E) : Prop := 
   (V' = V) /\ (is_subtree T G).
-
-
-
-(* Unrelated lemma (can probably be removed) *)
-
-Lemma being_part_of_graph_means_enumerable :
-	forall V E (G : Graph V E), V_enumerable V.
-Proof.
-	intros. induction G.
-	- unfold V_enumerable. unfold U_enumerable.
-		apply exist with (x := nil). intros x H. inversion H.
-	- inversion IHG as [vl Hvl].
-		exists (x::vl). intros y Hy.
-		case (V_eq_dec y x); intros H_xy.
-		+ rewrite H_xy. unfold In; left; reflexivity.
-		+ assert (H_Vy : v y). {
-				unfold V_union in Hy. destruct Hy; subst.
-				- inversion H; subst; clear H. contradiction.
-				- assumption.
-			}
-			 apply (Hvl y) in H_Vy.
-			 unfold In; right. apply H_Vy.
-	- assumption.
-	- subst; assumption.
-Qed.
 
 
 
@@ -369,64 +315,6 @@ Proof.
 Qed.
 
 
-
-(* 
-Lemma Path_append :
- forall V E (x y z : Vertex) (vl vl' : V_list) (el el' : E_list),
- Path V E x y vl el -> Path V E y z vl' el' ->
- (x = y -> vl = nil) -> (y = z -> vl' = nil) ->
- (forall v, In v vl -> In v vl' -> False) ->
- Path V E x z (vl ++ vl') (el ++ el').
-Proof.
-	intros V E x y z vl vl' el el' Hp; induction Hp eqn:P; simpl; intros; try solve [assumption].
-	apply P_step; try solve [assumption].
-	- apply (IHp p eq_refl).
-		+ assumption.
-		+ intros H_yz0. subst.
-			inversion p; subst; try solve [reflexivity].
-			exfalso.
-			assert (H_obv : (y::vl0) <> V_nil) by discriminate.
-			specialize (P_iny_vl _ _ _ _ _ _ p H_obv) as H'.
-			contradiction.
-		+ intros H_z0z. subst.
-			apply H1. reflexivity.
-		+ intros m Hm1 Hm2.
-			apply (H2 m).
-			* right. assumption.
-			* assumption.
-	- intros H'. apply in_app_or in H'. destruct H'.
-		+ contradiction.
-		+ apply (H2 y).
-			* left. reflexivity.
-			* assumption.
-	- intros H'. apply in_app_or in H'. destruct H'.
-		+ assert (Hx : In x vl) by assumption.
-			apply e in H3. subst.
-			assert (Hz0 : y = z0 \/ In z0 vl) by (right; assumption).
-			specialize (H2 z0). apply H2 in Hz0.
-			* destruct Hz0.
-			* assert (Hz0' : z0 = z0) by reflexivity.
-				apply H0 in Hz0'. discriminate.
-		+ case (V_in_dec x vl); intros H_xvl;
-				try solve [exfalso; apply (H2 x); [right; assumption | assumption]].
-			case (V_eq_dec x z0); intros H_xz0;
-				try solve [apply H0 in H_xz0; discriminate].
-			assert (H_obv : (y::vl) <> V_nil) by discriminate.
-			specialize (P_iny_vl _ _ _ _ _ _ Hp H_obv) as H'.
-			destruct H'.
-			* subst z0.
-				inversion p.
-				-- subst.
-Admitted.
- *)
-
-(* 
-Lemma Path_reverse :
- forall V E (x y : Vertex) (vl : V_list) (el : E_list),
- Path V E x y vl el -> Path V E y x (cdr (rev (x :: vl))) (E_reverse el).
-Proof. Admitted.
- *)
-
 Lemma diff_diff_incl :
 	forall T (A B : U_set T),
 	(A \ (A \ B)) ⊆ A.
@@ -436,11 +324,9 @@ Proof.
 Qed.
 
 
-
-
-
-
-
+(* This is the wrong approach, doing this by direct induction might not be possible *)
+(* The better approach is the use find_first_crossing_edge_on_path and the inverse of this cut *)
+(* but that would require reversing paths back and forth *)
 Lemma find_last_crossing_edge_on_path :
 	forall {V E} (G: Graph V E) A x z vl el,
 	nontrivial_cut G A -> x ∈ A -> z ∉ A -> Path V E x z vl el ->
@@ -493,14 +379,9 @@ Proof.
 			inversion H_path; subst. exists t. exists el0. constructor.
 			* constructor. destruct H_A_nontrivial. apply H. assumption.
 			* admit.
-			(* * exists H1. simpl. reflexivity. simpl. reflexivity. *)
+				(* The induction here would be insanely difficult *)
+				(* this is the wrong approach; see comment above lemma *)
 Admitted.
-
-
-
-
-
-
 
 
 
@@ -558,23 +439,4 @@ Proof.
 		+ apply H_E_GE. assumption.
 		+ assumption.
 Qed.
-
-
-
-
-Theorem tree_edge_crossing_cut_unique :
-	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
-	forall x y u v, edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
-	x = u /\ y = v.
-Proof. Admitted.
-
-
-
-Theorem tree_edge_crossing_cut_unique' :
-	forall {V GE E} (G : Graph V GE) (T: Tree V E) A, nontrivial_cut G A ->
-	forall x y u v vl el, Walk V E x y vl el -> In (u~~v) el -> 
-	edge_crossing_cut G A x y -> edge_crossing_cut G A u v ->
-	(x--y) ∈ E ->	x = u /\ y = v.
-Proof. Admitted.
-
 

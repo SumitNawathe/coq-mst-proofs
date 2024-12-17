@@ -70,4 +70,6 @@ Proof.
 				--	(* y1 not in vl2' => construct y1 -> p -> y2 --> q *)
 						admit.
 Admitted.
-
+(* To construct the cycle, you need to reverse at least one of the paths *)
+(* This will require an enormous amount of infrastructure *)
+(* The library has a lemma for reversing walks, nothing on reversing trails or paths *)

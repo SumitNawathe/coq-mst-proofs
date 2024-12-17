@@ -3,7 +3,6 @@ Require Export MST.CustomNotations.
 
 
 
-(* Strong decideability for sets *)
 (* 
 For our proofs, we are assuming that all sets are finite;
 that is, there is some finite superset containing all sets we are working with.
@@ -27,12 +26,16 @@ Proof.
 Qed.
 
 
+
 (* Lemmas about inclusion *)
 
 Lemma subset_empty_is_empty : forall {T} (A: U_set T), A ⊆ ∅ -> A = ∅.
 Proof.
 	intros T A H_AT. apply U_set_eq. intros x; split; intros H; [auto | inversion H].
 Qed.
+
+Lemma self_inclusion : forall T (A : U_set T), A ⊆ A.
+Proof. intros. unfold Included. auto. Qed.
 
 Lemma set_minus_point_still_included :
 	forall T (A : U_set T) (x : T), (A\⟨x⟩) ⊆ A.
@@ -80,6 +83,9 @@ Qed.
 Lemma not_empty_iff_exists :
 	forall T (A: U_set T), A <> ∅ -> {x : T & A x}.
 Proof. Admitted.
+(* logically (mathematically) equivalent to the previous lemma,
+but not sure it is provable in the current system;
+probably needs to be an axiom *)
 
 Lemma single_union_empty :
 	forall T (x : T), ⟨x⟩ ∪ ∅ = ⟨x⟩.
@@ -97,7 +103,7 @@ Lemma not_empty_or_included :
 	forall {T} (A B : U_set T), B <> ∅ -> B ⊄ A -> {x & x ∈ B & x ∉ A}.
 Proof. Admitted.
 (* This is also probably an axiom, not sure its provable within the current system,
-but its true for finite sets *)
+but it is true for finite sets *)
 
 Lemma subset_but_not_equal :
 	forall T (A B : U_set T), A ⊆ B -> A <> B -> {x & x ∈ B & x ∉ A}.
